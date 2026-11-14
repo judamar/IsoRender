@@ -10,7 +10,6 @@ import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.texture.TextureMap;
-import net.minecraft.util.text.TextComponentString;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 
@@ -36,9 +35,7 @@ public final class RenderPrueba {
     /** Argumento de "/isorender prueba-multi [n]": entero 2-8; vacío = 4. Lanza IllegalArgumentException en español. */
     public static int parsearN(String arg) { return GeometriaRegion.parsearN(arg); }
 
-    private static void chat(Minecraft mc, String s) {
-        if (mc.player != null) mc.player.sendMessage(new TextComponentString("[IsoRender] " + s));
-    }
+    private static void chat(Minecraft mc, String s) { Chat.decir(mc, s); }
 
     private static void avisosGeometria(Minecraft mc, GeometriaCacheada geo) {
         if (geo.fallidos() > 0) chat(mc, geo.fallidos() + " bloques no se pudieron dibujar y se omitieron");
@@ -86,7 +83,7 @@ public final class RenderPrueba {
 
     /** Flujo comun: guardia, construccion, dibujo, avisos, guardado y mensaje. {@code destino} decide el File (tras dibujar). */
     private static void render(Minecraft mc, int[] reg, int res, ParametrosCamara cam, String exito, String contexto, Supplier<File> destino) {
-        if (!GUARDIA.entrar()) { chat(mc, "Ya hay un render en curso; espera a que termine."); return; }
+        if (!GUARDIA.entrar()) { chat(mc, Chat.OCUPADO); return; }
         try {
             long t0 = System.currentTimeMillis();
             // (a) Construccion: lee el mundo y sube la geometria; close() la libera siempre (tambien si falla).
@@ -97,8 +94,8 @@ public final class RenderPrueba {
                 avisosEntidades(mc, geo.ultimasEntidades());
                 File out = destino.get();
                 guardar(img, out);
-                chat(mc, exito + " " + res + "x" + res + " px (" + geo.bloques() + " bloques) en " + out.getAbsolutePath()
-                        + " [" + (System.currentTimeMillis() - t0) + " ms]");
+                Chat.archivo(mc, exito + " " + res + "x" + res + " px (" + geo.bloques() + " bloques) en ", out,
+                        " [" + (System.currentTimeMillis() - t0) + " ms]");
             }
         } catch (Throwable e) {
             Fallos.informar(mc, contexto, e);
@@ -112,7 +109,7 @@ public final class RenderPrueba {
      * Informa el tiempo de construccion y el tiempo medio de dibujo (FBO + dibujo + lectura de pixeles; sin PNG).
      */
     public static void ejecutarMulti(Minecraft mc, int[] reg, int n) {
-        if (!GUARDIA.entrar()) { chat(mc, "Ya hay un render en curso; espera a que termine."); return; }
+        if (!GUARDIA.entrar()) { chat(mc, Chat.OCUPADO); return; }
         final int res = 512;
         try {
             long t0 = System.nanoTime();

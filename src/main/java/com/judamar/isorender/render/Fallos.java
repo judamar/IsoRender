@@ -2,7 +2,6 @@ package com.judamar.isorender.render;
 
 import java.io.IOException;
 import net.minecraft.client.Minecraft;
-import net.minecraft.util.text.TextComponentString;
 
 /**
  * T-022 (RNF-005): cualquier fallo de seleccion, render o menu se informa en el chat con un mensaje corto en español
@@ -45,8 +44,6 @@ public final class Fallos {
     /** Traza completa a la consola/log y mensaje corto al chat. Nunca lanza. */
     public static void informar(Minecraft mc, String contexto, Throwable e) {
         try { e.printStackTrace(); } catch (Throwable ignorado) { }
-        try {
-            if (mc != null && mc.player != null) mc.player.sendMessage(new TextComponentString("[IsoRender] " + mensaje(e, contexto)));
-        } catch (Throwable ignorado) { }
+        Chat.decir(mc, mensaje(e, contexto));
     }
 }

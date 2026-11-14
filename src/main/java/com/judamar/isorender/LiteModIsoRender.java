@@ -81,7 +81,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
                 case PRUEBA: case PRUEBA_MULTI: case ESTRES:
                     // T-022: un render a la vez; el segundo comando se rechaza en vez de pisar al primero.
                     if (pendiente != null || estres != null || RenderPrueba.ocupado()) {
-                        decir(mc, "Ya hay un render en curso o pendiente; espera a que termine.");
+                        decir(mc, com.judamar.isorender.render.Chat.OCUPADO);
                     } else { pruebaArg = Subcomando.argumento(message); pendiente = sub; }
                     break;
                 case POS1: case POS2: fijarPunto(mc, sub == Subcomando.POS1); break;
@@ -97,7 +97,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
     }
 
     private static void decir(Minecraft mc, String texto) {
-        mc.player.sendMessage(new TextComponentString("[IsoRender] " + texto));
+        com.judamar.isorender.render.Chat.decir(mc, texto);
     }
 
     /** Fija pos1/pos2 en el bloque apuntado; sin bloque apuntado, en el bloque bajo los pies (CA-003.2). Solo lectura. */
@@ -126,7 +126,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         try {
             if (mc.world == null || mc.player == null) return;
             if (pendiente != null || estres != null || RenderPrueba.ocupado()) {
-                decir(mc, "Ya hay un render en curso o pendiente; espera a que termine.");
+                decir(mc, com.judamar.isorender.render.Chat.OCUPADO);
                 return;
             }
             String error = ValidacionMundo.validar(seleccion, mc.world, ValidacionRegion.MAX);

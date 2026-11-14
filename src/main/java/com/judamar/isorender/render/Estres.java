@@ -1,7 +1,6 @@
 package com.judamar.isorender.render;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.util.text.TextComponentString;
 
 /**
  * T-022 (CP-24, CP-27): "/isorender estres [n]". n renders consecutivos de la region a 512 px, UNO POR FRAME (el
@@ -30,7 +29,7 @@ public final class Estres {
     public static Estres iniciar(Minecraft mc, int[] reg, String argN) {
         int n = ResumenEstres.parsearN(argN); // lanza IllegalArgumentException en español
         if (!RenderPrueba.guardia().entrar()) {
-            mc.player.sendMessage(new TextComponentString("[IsoRender] Ya hay un render en curso; espera a que termine."));
+            decir(mc, Chat.OCUPADO);
             return null;
         }
         Estres e = new Estres(reg, n);
@@ -41,7 +40,7 @@ public final class Estres {
     }
 
     private static void decir(Minecraft mc, String s) {
-        if (mc.player != null) mc.player.sendMessage(new TextComponentString("[IsoRender] " + s));
+        Chat.decir(mc, s);
     }
 
     /** Ejecuta un render. Devuelve true cuando terminó (bien, con error o abortado) y la guardia ya se liberó. */
