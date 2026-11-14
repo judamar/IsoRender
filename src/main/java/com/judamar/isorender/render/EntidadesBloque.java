@@ -75,6 +75,7 @@ final class EntidadesBloque {
                     BlockPos p = te.getPos();
                     // Luz de objeto estandar con la camara activa (como vanilla en el mundo); lightmap apagado: luz plena y fija.
                     RenderHelper.enableStandardItemLighting();
+                    luzObjeto();
                     GlStateManager.enableCull();
                     GlStateManager.pushMatrix();
                     // Los renderers reciben x,y,z y los suman a la matriz actual: trasladamos al origen de la region y pasamos
@@ -99,6 +100,20 @@ final class EntidadesBloque {
             try { mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE); } catch (Throwable e) { e.printStackTrace(); }
         }
         return new ResumenEntidades(ok, fallidas);
+    }
+
+    /**
+     * Fuerza por GL directo el material y la luz ambiente de la luz de objeto. Con solo GlStateManager, cofres y camas salian
+     * entre 3 y 7 veces mas oscuros que la textura (confirmado en el juego): la cache de GlStateManager no refleja el estado real,
+     * asi que enableColorMaterial() queda sin efecto y se usa el material por defecto de OpenGL en vez del color blanco.
+     */
+    private static void luzObjeto() {
+        GL11.glEnable(GL11.GL_COLOR_MATERIAL);
+        GL11.glColorMaterial(GL11.GL_FRONT_AND_BACK, GL11.GL_AMBIENT_AND_DIFFUSE);
+        GL11.glColor4f(1F, 1F, 1F, 1F);
+        java.nio.FloatBuffer b = org.lwjgl.BufferUtils.createFloatBuffer(4);
+        b.put(0.4F).put(0.4F).put(0.4F).put(1F).flip();
+        GL11.glLightModel(GL11.GL_LIGHT_MODEL_AMBIENT, b);
     }
 
     /** Deja el estado GL como lo espera la pasada de solidos (y la translucida que sigue), pase lo que pase en el renderer. */
