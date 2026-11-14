@@ -1,10 +1,12 @@
 package com.judamar.isorender;
 
+import com.judamar.isorender.configuracion.Ajustes;
+import com.judamar.isorender.configuracion.ArchivoConfiguracion;
+import com.judamar.isorender.configuracion.Configuracion;
 import com.judamar.isorender.menu.PantallaMenu;
 import com.judamar.isorender.seleccion.Seleccion;
 import com.judamar.isorender.seleccion.Subcomando;
 import com.judamar.isorender.seleccion.ValidacionMundo;
-import com.judamar.isorender.seleccion.ValidacionRegion;
 import com.mumfrey.liteloader.LiteMod;
 import com.judamar.isorender.render.Estres;
 import com.judamar.isorender.render.Fallos;
@@ -31,6 +33,9 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
     private final KeyBinding teclaMenu = new KeyBinding("Abrir menú IsoRender", Keyboard.KEY_K, "IsoRender");
     private final Seleccion seleccion = new Seleccion();
     private final com.judamar.isorender.menu.EstadoCamara camara = new com.judamar.isorender.menu.EstadoCamara();
+    private static final org.apache.logging.log4j.Logger LOG = org.apache.logging.log4j.LogManager.getLogger("IsoRender");
+    private File archivoConfig;
+    private Configuracion ultimoGuardado;
     private boolean saludado;
     /** El filtro de chat corre dentro de sendChatMessage: la pantalla se abre en el siguiente tick. */
     private volatile boolean abrirMenu;
@@ -49,6 +54,25 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
     @Override
     public void init(File configPath) {
         LiteLoader.getInput().registerKeyBinding(teclaMenu);
+        try {
+            archivoConfig = new File(configPath, "isorender.properties");
+            LOG.info("Configuración en " + archivoConfig.getAbsolutePath());
+            Configuracion c = ArchivoConfiguracion.cargar(archivoConfig, LOG::warn); // crea el archivo si falta; avisos al log, no al chat
+            Ajustes.actual(c);
+            camara.sembrar(c);
+            ultimoGuardado = c;
+        } catch (Throwable e) {
+            LOG.warn("No se pudo cargar la configuración; se usan los valores por defecto.", e); // RNF-005
+        }
+    }
+
+    /** T-030 (RF-029): al cerrar el menú guarda cámara, resolución y fondo actuales; sin cambios no escribe. Nunca lanza. */
+    private void guardarConfiguracion() {
+        if (archivoConfig == null) return;
+        Configuracion c = camara.aConfiguracion(Ajustes.actual());
+        if (c.equals(ultimoGuardado)) return;
+        ArchivoConfiguracion.guardar(archivoConfig, c, LOG::warn);
+        ultimoGuardado = c;
     }
 
     @Override
@@ -63,7 +87,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         boolean abrir = (tecla || abrirMenu) && mc.currentScreen == null;
         abrirMenu = false;
         if (abrir) {
-            try { mc.displayGuiScreen(new PantallaMenu(seleccion, camara, this::pedirRenderMenu)); }
+            try { mc.displayGuiScreen(new PantallaMenu(seleccion, camara, this::pedirRenderMenu, this::guardarConfiguracion)); }
             catch (Throwable e) { Fallos.informar(mc, "abrir el menú", e); } // RNF-005: un fallo del menu no cierra el juego
         }
     }
@@ -129,7 +153,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
                 decir(mc, com.judamar.isorender.render.Chat.OCUPADO);
                 return;
             }
-            String error = ValidacionMundo.validar(seleccion, mc.world, ValidacionRegion.MAX);
+            String error = ValidacionMundo.validar(seleccion, mc.world, Ajustes.actual().tamanoMaximo);
             if (error != null) { decir(mc, error); return; }
             RenderPrueba.exportar(mc, seleccion.region(), camara.resolucion(), camara.actual());
         } catch (Throwable e) {
@@ -156,7 +180,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
                 lado = ResolucionSalida.parsear(a.length > 0 ? a[0] : "");
                 cam = ParametrosCamara.parsear(a.length > 1 ? java.util.Arrays.copyOfRange(a, 1, a.length) : new String[0]);
             } else Estres.validarArgumento(pruebaArg);
-            String error = ValidacionMundo.validar(seleccion, mc.world, ValidacionRegion.MAX);
+            String error = ValidacionMundo.validar(seleccion, mc.world, Ajustes.actual().tamanoMaximo);
             if (error != null) { decir(mc, error); return; }
             if (sub == Subcomando.PRUEBA_MULTI) RenderPrueba.ejecutarMulti(mc, seleccion.region(), n);
             else if (sub == Subcomando.PRUEBA) RenderPrueba.ejecutar(mc, seleccion.region(), lado, cam);

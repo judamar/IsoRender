@@ -1,5 +1,6 @@
 package com.judamar.isorender.menu;
 
+import com.judamar.isorender.configuracion.Configuracion;
 import com.judamar.isorender.render.FondoVista;
 import com.judamar.isorender.render.ParametrosCamara;
 import com.judamar.isorender.render.ResolucionSalida;
@@ -11,6 +12,14 @@ public final class EstadoCamara {
     private FondoVista fondo = FondoVista.TABLERO;
 
     private int resolucion = ResolucionSalida.POR_DEFECTO;
+
+    /** T-030 (RF-028/RF-029): carga cámara, resolución y fondo desde la configuración leída al iniciar. */
+    public void sembrar(Configuracion c) { actual = c.camara; resolucion = c.resolucion; fondo = c.fondo; }
+
+    /** T-030 (RF-029): configuración con el estado actual; carpeta de salida y tamaño máximo se conservan de {@code base}. */
+    public Configuracion aConfiguracion(Configuracion base) {
+        return new Configuracion(base.carpetaSalida, resolucion, actual, fondo, base.tamanoMaximo);
+    }
 
     public ParametrosCamara actual() { return actual; }
 

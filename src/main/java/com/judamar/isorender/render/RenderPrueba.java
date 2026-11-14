@@ -1,5 +1,6 @@
 package com.judamar.isorender.render;
 
+import com.judamar.isorender.configuracion.Ajustes;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -64,8 +65,8 @@ public final class RenderPrueba {
         return GeometriaCacheada.construir(mc, reg);
     }
 
-    /** T-028 [SUPUESTO]: carpeta de exportacion por defecto; T-029 la leera de la configuracion. Unico punto a cambiar. */
-    static File carpetaSalida(Minecraft mc) { return new File(mc.mcDataDir, "isorender"); }
+    /** T-028/T-030: carpeta de exportacion segun la configuracion (vacia = isorender dentro del directorio del juego). */
+    static File carpetaSalida(Minecraft mc) { return Ajustes.resolverCarpeta(Ajustes.actual().carpetaSalida, mc.mcDataDir); }
 
     /** Prueba (/isorender prueba): PNG en isorender-test con el nombre de siempre. Debe llamarse desde el hilo de render. Nunca lanza. */
     public static void ejecutar(Minecraft mc, int[] reg, int res, ParametrosCamara cam) {

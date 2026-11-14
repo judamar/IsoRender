@@ -25,7 +25,7 @@ public class PantallaMenu extends GuiScreen {
     private static final int N = Parametro.values().length; // el campo de resolución es campos[N]
     private final Seleccion seleccion;
     private final EstadoCamara camara;
-    private final Runnable alRenderizar;
+    private final Runnable alRenderizar, alCerrar;
     private final Deslizador[] deslizadores = new Deslizador[N];
     private final GuiTextField[] campos = new GuiTextField[N + 1];
     private final VistaPrevia vista = new VistaPrevia(); // T-025: se crea aquí, no en initGui (initGui se repite al redimensionar)
@@ -33,8 +33,9 @@ public class PantallaMenu extends GuiScreen {
     private String error;
 
     /** alRenderizar: lo llama el botón Renderizar tras cerrar el menú; el mod hace el render en el frame siguiente. */
-    public PantallaMenu(Seleccion seleccion, EstadoCamara camara, Runnable alRenderizar) {
-        this.seleccion = seleccion; this.camara = camara; this.alRenderizar = alRenderizar;
+    /** alCerrar (T-030, RF-029): se llama al cerrar el menú para guardar el último ajuste; sus fallos no llegan al jugador. */
+    public PantallaMenu(Seleccion seleccion, EstadoCamara camara, Runnable alRenderizar, Runnable alCerrar) {
+        this.seleccion = seleccion; this.camara = camara; this.alRenderizar = alRenderizar; this.alCerrar = alCerrar;
     }
 
     /** Filas de 22 px desde y = 40. */
@@ -90,7 +91,11 @@ public class PantallaMenu extends GuiScreen {
         return "Vista: " + (perspectiva ? "Persp." : "Isom.");
     }
 
-    @Override public void onGuiClosed() { Keyboard.enableRepeatEvents(false); vista.close(); }
+    @Override public void onGuiClosed() {
+        Keyboard.enableRepeatEvents(false);
+        vista.close();
+        try { alCerrar.run(); } catch (Throwable e) { /* RNF-005: guardar la configuración nunca debe molestar al jugador */ }
+    }
 
     private void alDeslizar(Parametro p, double valor) {
         error = null;

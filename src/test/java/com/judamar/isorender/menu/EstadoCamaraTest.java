@@ -2,6 +2,7 @@ package com.judamar.isorender.menu;
 
 import static org.junit.Assert.assertEquals;
 
+import com.judamar.isorender.configuracion.Configuracion;
 import com.judamar.isorender.render.FondoVista;
 import com.judamar.isorender.render.ParametrosCamara;
 import org.junit.Test;
@@ -33,5 +34,21 @@ public class EstadoCamaraTest {
             try { e.fijarResolucion(v); org.junit.Assert.fail(); } catch (IllegalArgumentException ex) { }
         }
         assertEquals(1024, e.resolucion());
+    }
+
+    @Test public void sembrarYAConfiguracion() { // T-030
+        Configuracion base = new Configuracion("salidas", 1024, ParametrosCamara.crear(10, 20, 150, 0.1, -0.2, true), FondoVista.GRIS, 32);
+        EstadoCamara e = new EstadoCamara();
+        e.sembrar(base);
+        assertEquals(base.camara, e.actual());
+        assertEquals(1024, e.resolucion());
+        assertEquals(FondoVista.GRIS, e.fondo());
+        e.fijar(Parametro.ZOOM, 300);
+        Configuracion c = e.aConfiguracion(base);
+        assertEquals(300, c.camara.zoom, 0);
+        assertEquals("salidas", c.carpetaSalida);
+        assertEquals(32, c.tamanoMaximo);
+        e.restablecer(); // sigue siendo el valor de fábrica, no la configuración
+        assertEquals(ParametrosCamara.POR_DEFECTO, e.actual());
     }
 }

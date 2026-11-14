@@ -3,7 +3,7 @@ package com.judamar.isorender.render;
 import com.judamar.isorender.menu.TextoSeleccion;
 import com.judamar.isorender.seleccion.Seleccion;
 import com.judamar.isorender.seleccion.ValidacionMundo;
-import com.judamar.isorender.seleccion.ValidacionRegion;
+import com.judamar.isorender.configuracion.Ajustes;
 import java.util.Arrays;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -62,7 +62,7 @@ public final class VistaPrevia implements AutoCloseable {
         int[] reg = sel.region();
         // (a) Validación al abrir, cada ~20 frames y cuando cambia la región.
         if (frame++ % REVALIDAR_CADA == 0 || !Arrays.equals(reg, regValidada)) {
-            motivoInvalido = !sel.completa() ? TextoSeleccion.describir(sel) : ValidacionMundo.validar(sel, mc.world, ValidacionRegion.MAX);
+            motivoInvalido = !sel.completa() ? TextoSeleccion.describir(sel) : ValidacionMundo.validar(sel, mc.world, Ajustes.actual().tamanoMaximo);
             regValidada = reg;
         }
         if (motivoInvalido != null) {
