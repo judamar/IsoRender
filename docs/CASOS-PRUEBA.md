@@ -41,17 +41,17 @@ Pasos con la selección hechos con `/isorender pos1` y `pos2` apuntando a bloque
 
 | Caso | Estructura | Pasos | Resultado esperado | Tipo | Estado |
 |---|---|---|---|---|---|
-| CP-01 | — | Arrancar con el `.litemod`; repetir con versión de MC distinta y con otros mods | Carga y saludo en el chat; LiteLoader lista IsoRender 0.1.0 | J | — |
+| CP-01 | — | Arrancar con el `.litemod`; repetir con versión de MC distinta y con otros mods | Carga y saludo en el chat; LiteLoader lista IsoRender 0.1.0 | J | OK (T-034, solicitante, 2026-11-14) |
 | CP-02 | — | `unzip -l` del `.litemod`; `./gradlew validarLitemod` | `litemod.json` + `LICENSE`; la tarea falla si falta alguno | M | OK (T-031) |
-| CP-03 | ER-1 | pos1 apuntando a bloque; pos1 sin apuntar (usa el bloque bajo los pies); pos1 de nuevo (reemplaza); pos2 = pos1 | Mensajes con coordenadas; región 1×1×1 válida | J/U | — |
+| CP-03 | ER-1 | pos1 apuntando a bloque; pos1 sin apuntar (usa el bloque bajo los pies); pos1 de nuevo (reemplaza); pos2 = pos1 | Mensajes con coordenadas; región 1×1×1 válida | J/U | OK (T-034, solicitante, 2026-11-14) |
 | CP-04 | ER-1 | pos1/pos2 en orden inverso | Mismas dimensiones (RN-002) | U | OK |
-| CP-05 | ER-1 | Ver el contorno; `/isorender clear` | Caja visible desde dentro y fuera; desaparece al limpiar | J | — |
-| CP-06 | ER-4, ER-7 | Un solo punto; 65 de lado; chunk descargado (volar lejos); región solo de aire; Renderizar | Mensaje de motivo en español en cada caso, sin PNG | J/U | — |
-| CP-07 | ER-1 | `/isorender render` y abrir el PNG | Bloques correctos y orientados; puerta, valla, escaleras, losas | J | — |
-| CP-08 | ER-5, ER-2 | Rotaciones 0, 45, 90, 180, 270 y elevaciones 5, 35, 90; vista isométrica y perspectiva | Estructura entera dentro del PNG con margen | J/U | — |
-| CP-09 | ER-1 | Abrir el PNG sobre fondo blanco y negro | Alfa 0 fuera de la silueta; alfa parcial en cristal | J/M | — |
-| CP-10 | ER-1 | Cristal, hojas, agua en bioma distinto (bosque, pantano) | Translúcidos mezclados, tinte por bioma | J | — |
-| CP-11 | ER-1 | Cofre, cama, cartel; cabeza | Entidades de bloque dibujadas; una que falla se omite con aviso | J | — |
+| CP-05 | ER-1 | Ver el contorno; `/isorender clear` | Caja visible desde dentro y fuera; desaparece al limpiar | J | OK (T-034, solicitante, 2026-11-14) |
+| CP-06 | ER-4, ER-7 | Un solo punto; 65 de lado; chunk descargado (volar lejos); región solo de aire; Renderizar | Mensaje de motivo en español en cada caso, sin PNG | J/U | OK (T-034, solicitante, 2026-11-14) |
+| CP-07 | ER-1 | `/isorender render` y abrir el PNG | Bloques correctos y orientados; puerta, valla, escaleras, losas | J | OK (T-034, solicitante, 2026-11-14) |
+| CP-08 | ER-5, ER-2 | Rotaciones 0, 45, 90, 180, 270 y elevaciones 5, 35, 90; vista isométrica y perspectiva | Estructura entera dentro del PNG con margen | J/U | OK (T-034, solicitante, 2026-11-14) |
+| CP-09 | ER-1 | Abrir el PNG sobre fondo blanco y negro | Alfa 0 fuera de la silueta; alfa parcial en cristal | J/M | OK (T-034, solicitante, 2026-11-14) |
+| CP-10 | ER-1 | Cristal, hojas, agua en bioma distinto (bosque, pantano) | Translúcidos mezclados, tinte por bioma | J | OK (T-034, solicitante, 2026-11-14) |
+| CP-11 | ER-1 | Cofre, cama, cartel; cabeza | Entidades de bloque dibujadas; una que falla se omite con aviso | J | OK (T-034, solicitante, 2026-11-14) |
 | CP-12 | — | K; `/isorender menu`; K con inventario abierto; sin selección | Menú abre; no se abre un 2.º; con «Falta definir la selección» y Renderizar gris | J | OK (T-023) |
 | CP-13 | ER-1 | Deslizadores y campos de rotación/elevación, extremos | Valores limitados a 0–359 y 5–90 | J/U | OK (T-024) |
 | CP-14 | ER-1 | Zoom y desplazamientos, extremos | Limitados a 25–400 % y ±100 % | J/U | OK (T-024) |
@@ -61,16 +61,16 @@ Pasos con la selección hechos con `/isorender pos1` y `pos2` apuntando a bloque
 | CP-18 | ER-6 | Dos renders seguidos; carpeta inexistente; solo lectura; coordenadas negativas | Dos archivos; carpeta creada; error informado sin PNG parcial; nombre válido | J/U | OK (T-028) |
 | CP-19 | — | Éxito y fallo | Ruta una vez; causa en español | J | OK (T-027) |
 | CP-20 | — | Configuración válida, corrupta, ausente; último ajuste | Ver T-029/T-030 | J/U | OK |
-| CP-21 | — | Cliente vanilla + LiteLoader sin Forge | Sin errores atribuibles al mod en `latest.log` | J | — |
-| CP-22 | ER-3 | 5 renders de 32³ a 2048 px (`/isorender render`) midiendo el tiempo del chat | Promedio ≤ 10 s, máximo ≤ 15 s | M | — |
+| CP-21 | — | Cliente vanilla + LiteLoader sin Forge | Sin errores atribuibles al mod en `latest.log` | J | OK (T-034, solicitante, 2026-11-14) |
+| CP-22 | ER-3 | 5 renders de 32³ a 2048 px (`/isorender render`) midiendo el tiempo del chat | Promedio ≤ 10 s, máximo ≤ 15 s | M | OK (T-034, solicitante, sin cifras anotadas) |
 | CP-23 | ER-1 | PNG a zoom 400 % sobre blanco y negro | Bordes sin halos | J | OK (T-019) |
 | CP-24 | ER-1 | 30 fallos forzados | Sin cierre | J | OK (T-022) |
 | CP-25 | — | `./gradlew build` con JDK 8; revisión de paquetes y comentarios | Compila; estructura por paquetes | M | OK |
 | CP-26 | — | Revisión legal | docs/LICENCIAS.md | M | OK (T-032) |
 | CP-27 | ER-3 | 30 renders y 30 aperturas del menú (`estres 30`) | Memoria ±5 %, sin error GL | J/M | OK (T-022) |
 | CP-28 | ER-1 | F2 antes/después de renderizar y de cerrar el menú | Fotograma idéntico | J | OK (T-022) |
-| CP-29 | — | Menú en 854×480 y 1920×1080 | Controles visibles y sin solape | J | OK (T-026, falta 1920×1080 formal) |
-| CP-30 | ER-1 | 20 selecciones y renders; comparar el mundo (F3+A, `/clone` de control) | El mundo no cambia | J | — |
+| CP-29 | — | Menú en 854×480 y 1920×1080 | Controles visibles y sin solape | J | OK (T-026; 1920×1080 en T-034) |
+| CP-30 | ER-1 | 20 selecciones y renders; comparar el mundo (F3+A, `/clone` de control) | El mundo no cambia | J | OK (T-034, solicitante, 2026-11-14) |
 | CP-31 | — | Solo si T-042/T-043 | — | — | no aplica |
 
 ## 3. Procedimiento
