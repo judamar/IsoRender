@@ -19,8 +19,6 @@ import org.lwjgl.opengl.GL11;
 
 /** T-011 (prototipo): render isometrico 8x8x8 a FBO propio y PNG con alfa. Solo lectura del mundo. */
 public final class RenderPrueba {
-    private static final double ELEVACION = 35.264, ROTACION = 45;
-
     private RenderPrueba() { }
 
     private static void chat(Minecraft mc, String s) {
@@ -28,7 +26,7 @@ public final class RenderPrueba {
     }
 
     /** Debe llamarse desde el hilo de render (RenderListener.onRender). Nunca lanza. */
-    public static void ejecutar(Minecraft mc, int[] reg, int res) {
+    public static void ejecutar(Minecraft mc, int[] reg, int res, ParametrosCamara cam) {
         long t0 = System.currentTimeMillis();
         FramebufferRender fbo = null;
         boolean mats = false;
@@ -60,16 +58,8 @@ public final class RenderPrueba {
 
             fbo.enlazarYLimpiar(); // viewport res x res; limpia con alfa 0 y profundidad
 
-            // Camara ortografica isometrica: rotX(elevacion) * rotY(rotacion) * traslacion al centro.
-            double r = Math.sqrt(nx * nx + ny * ny + nz * nz) / 2 + 0.5; // semi-diagonal: cabe en cualquier rotación
-            GlStateManager.matrixMode(GL11.GL_PROJECTION);
-            GlStateManager.loadIdentity();
-            GlStateManager.ortho(-r, r, -r, r, -256, 256);
-            GlStateManager.matrixMode(GL11.GL_MODELVIEW);
-            GlStateManager.loadIdentity();
-            GlStateManager.rotate((float) ELEVACION, 1, 0, 0);
-            GlStateManager.rotate((float) ROTACION, 0, 1, 0);
-            GlStateManager.translate(-(origen.getX() + nx / 2.0), -(origen.getY() + ny / 2.0), -(origen.getZ() + nz / 2.0));
+            // Cámara ortográfica parametrizable con encuadre automático (T-016).
+            CamaraGL.aplicar(cam, nx, ny, nz, origen.getX(), origen.getY(), origen.getZ());
 
             GlStateManager.enableDepth();
             GlStateManager.depthFunc(GL11.GL_LEQUAL);

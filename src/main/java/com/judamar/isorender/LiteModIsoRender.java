@@ -6,6 +6,7 @@ import com.judamar.isorender.seleccion.Subcomando;
 import com.judamar.isorender.seleccion.ValidacionMundo;
 import com.judamar.isorender.seleccion.ValidacionRegion;
 import com.mumfrey.liteloader.LiteMod;
+import com.judamar.isorender.render.ParametrosCamara;
 import com.judamar.isorender.render.RenderPrueba;
 import com.judamar.isorender.render.ResolucionSalida;
 import com.mumfrey.liteloader.OutboundChatFilter;
@@ -69,7 +70,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
             case CLEAR:
                 decir(mc, seleccion.limpiar() ? "Selección borrada." : "No había ninguna selección.");
                 break;
-            default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | prueba [lado 512-4096]");
+            default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | prueba [lado 512-4096] [rotación 0-359] [elevación 5-90] [zoom 25-400]");
         }
         return false;
     }
@@ -105,12 +106,17 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         try {
             if (mc.world == null || mc.player == null) return;
             int lado;
-            try { lado = ResolucionSalida.parsear(pruebaArg); }
+            ParametrosCamara cam;
+            try {
+                String[] a = pruebaArg.trim().isEmpty() ? new String[0] : pruebaArg.trim().split("\\s+");
+                lado = ResolucionSalida.parsear(a.length > 0 ? a[0] : "");
+                cam = ParametrosCamara.parsear(a.length > 1 ? java.util.Arrays.copyOfRange(a, 1, a.length) : a);
+            }
             catch (IllegalArgumentException e) { decir(mc, e.getMessage()); return; } // CA-025.2: sin archivo
             // Punto reutilizable para el futuro /isorender render: validar y luego renderizar la región.
             String error = ValidacionMundo.validar(seleccion, mc.world, ValidacionRegion.MAX);
             if (error != null) { decir(mc, error); return; }
-            RenderPrueba.ejecutar(mc, seleccion.region(), lado);
+            RenderPrueba.ejecutar(mc, seleccion.region(), lado, cam);
         } catch (Throwable e) {
             decir(mc, "Error al validar la región: " + e);
             e.printStackTrace();
