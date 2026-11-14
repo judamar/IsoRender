@@ -7,6 +7,7 @@ import com.judamar.isorender.seleccion.ValidacionMundo;
 import com.judamar.isorender.seleccion.ValidacionRegion;
 import com.mumfrey.liteloader.LiteMod;
 import com.judamar.isorender.render.RenderPrueba;
+import com.judamar.isorender.render.ResolucionSalida;
 import com.mumfrey.liteloader.OutboundChatFilter;
 import com.mumfrey.liteloader.PostRenderListener;
 import com.mumfrey.liteloader.RenderListener;
@@ -31,6 +32,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
     private volatile boolean abrirMenu;
     /** T-011: la prueba de render se ejecuta en el siguiente frame, dentro de onRender. */
     private volatile boolean pruebaPendiente;
+    private volatile String pruebaArg = "";
 
     @Override public String getName() { return "IsoRender"; }
     @Override public String getVersion() { return "0.1.0"; }
@@ -62,12 +64,12 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         Minecraft mc = Minecraft.getMinecraft();
         switch (sub) {
             case MENU: abrirMenu = true; break;
-            case PRUEBA: pruebaPendiente = true; break;
+            case PRUEBA: pruebaArg = Subcomando.argumento(message); pruebaPendiente = true; break;
             case POS1: case POS2: fijarPunto(mc, sub == Subcomando.POS1); break;
             case CLEAR:
                 decir(mc, seleccion.limpiar() ? "Selección borrada." : "No había ninguna selección.");
                 break;
-            default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | prueba");
+            default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | prueba [lado 512-4096]");
         }
         return false;
     }
@@ -102,10 +104,13 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         Minecraft mc = Minecraft.getMinecraft();
         try {
             if (mc.world == null || mc.player == null) return;
+            int lado;
+            try { lado = ResolucionSalida.parsear(pruebaArg); }
+            catch (IllegalArgumentException e) { decir(mc, e.getMessage()); return; } // CA-025.2: sin archivo
             // Punto reutilizable para el futuro /isorender render: validar y luego renderizar la región.
             String error = ValidacionMundo.validar(seleccion, mc.world, ValidacionRegion.MAX);
             if (error != null) { decir(mc, error); return; }
-            RenderPrueba.ejecutar(mc, seleccion.region());
+            RenderPrueba.ejecutar(mc, seleccion.region(), lado);
         } catch (Throwable e) {
             decir(mc, "Error al validar la región: " + e);
             e.printStackTrace();

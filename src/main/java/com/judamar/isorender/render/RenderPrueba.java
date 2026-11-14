@@ -12,16 +12,13 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.WorldVertexBufferUploader;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
-import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 
 /** T-011 (prototipo): render isometrico 8x8x8 a FBO propio y PNG con alfa. Solo lectura del mundo. */
 public final class RenderPrueba {
-    private static final int RES = 512;
     private static final double ELEVACION = 35.264, ROTACION = 45;
 
     private RenderPrueba() { }
@@ -31,10 +28,10 @@ public final class RenderPrueba {
     }
 
     /** Debe llamarse desde el hilo de render (RenderListener.onRender). Nunca lanza. */
-    public static void ejecutar(Minecraft mc, int[] reg) {
+    public static void ejecutar(Minecraft mc, int[] reg, int res) {
         long t0 = System.currentTimeMillis();
-        Framebuffer fbo = null;
-        boolean attrib = false, mats = false;
+        FramebufferRender fbo = null;
+        boolean mats = false;
         try {
             World w = mc.world;
             if (w == null || mc.player == null) throw new IllegalStateException("no hay mundo cargado");
@@ -56,14 +53,12 @@ public final class RenderPrueba {
             if (dibujados == 0) throw new IllegalStateException("la región solo contiene aire");
 
             // (b) Render fuera de pantalla: aislar estado GL.
-            fbo = new Framebuffer(RES, RES, true);
-            GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS); attrib = true;
+            fbo = new FramebufferRender(res); // valida rango y límites de GPU; lanza con mensaje en español
+            // Sin glPushAttrib/glPopAttrib: desincroniza la caché de GlStateManager. Se restaura a mano en finally.
             GlStateManager.matrixMode(GL11.GL_PROJECTION); GlStateManager.pushMatrix();
             GlStateManager.matrixMode(GL11.GL_MODELVIEW); GlStateManager.pushMatrix(); mats = true;
 
-            fbo.bindFramebuffer(true); // tambien fija el viewport a RES x RES
-            fbo.setFramebufferColor(0, 0, 0, 0); // fondo transparente
-            fbo.framebufferClear();
+            fbo.enlazarYLimpiar(); // viewport res x res; limpia con alfa 0 y profundidad
 
             // Camara ortografica isometrica: rotX(elevacion) * rotY(rotacion) * traslacion al centro.
             double r = Math.sqrt(nx * nx + ny * ny + nz * nz) / 2 + 0.5; // semi-diagonal: cabe en cualquier rotación
@@ -89,9 +84,8 @@ public final class RenderPrueba {
             new WorldVertexBufferUploader().draw(buf); // dibuja y resetea el buffer
 
             // Lectura de pixeles del FBO (RGBA) y volcado a PNG con alfa (se invierte el eje Y).
-            ByteBuffer px = BufferUtils.createByteBuffer(RES * RES * 4);
-            GL11.glPixelStorei(GL11.GL_PACK_ALIGNMENT, 1);
-            GL11.glReadPixels(0, 0, RES, RES, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, px);
+            ByteBuffer px = fbo.leerPixeles();
+            int RES = res;
             BufferedImage img = new BufferedImage(RES, RES, BufferedImage.TYPE_INT_ARGB);
             for (int y = 0; y < RES; y++) {
                 for (int x = 0; x < RES; x++) {
@@ -102,9 +96,9 @@ public final class RenderPrueba {
             }
             File dir = new File(mc.mcDataDir, "isorender-test");
             dir.mkdirs();
-            File out = new File(dir, "prueba-" + System.currentTimeMillis() + ".png");
+            File out = new File(dir, "prueba-" + RES + "-" + System.currentTimeMillis() + ".png");
             ImageIO.write(img, "png", out);
-            chat(mc, "Prueba lista (" + dibujados + " bloques) en " + out.getPath()
+            chat(mc, "Prueba lista " + RES + "x" + RES + " px (" + dibujados + " bloques) en " + out.getPath()
                     + " [" + (System.currentTimeMillis() - t0) + " ms]");
         } catch (Throwable e) {
             chat(mc, "Error en la prueba de render: " + e);
@@ -116,9 +110,19 @@ public final class RenderPrueba {
                     GlStateManager.matrixMode(GL11.GL_PROJECTION); GlStateManager.popMatrix();
                     GlStateManager.matrixMode(GL11.GL_MODELVIEW); GlStateManager.popMatrix();
                 }
-                if (attrib) GL11.glPopAttrib();
-                if (fbo != null) fbo.deleteFramebuffer();
-                mc.getFramebuffer().bindFramebuffer(true);
+                if (fbo != null) fbo.close(); // libera el FBO y reenlaza el framebuffer principal + viewport
+                else mc.getFramebuffer().bindFramebuffer(true);
+                // Estado vanilla tras el render del mundo (igual que ContornoSeleccion)
+                GlStateManager.depthMask(true);
+                GlStateManager.depthFunc(GL11.GL_LEQUAL);
+                GlStateManager.enableDepth();
+                GlStateManager.enableCull();
+                GlStateManager.disableBlend();
+                GlStateManager.enableAlpha();
+                GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
+                GlStateManager.enableTexture2D();
+                GlStateManager.enableLighting();
+                GlStateManager.color(1f, 1f, 1f, 1f);
             } catch (Throwable e) { e.printStackTrace(); }
         }
     }

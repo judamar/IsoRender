@@ -8,7 +8,9 @@ public enum Subcomando {
     public static Subcomando parsear(String linea) {
         String m = linea.trim();
         if (!m.equals("/isorender") && !m.startsWith("/isorender ")) return null;
-        switch (m.substring("/isorender".length()).trim()) {
+        String[] t = m.substring("/isorender".length()).trim().split("\\s+", 2);
+        if (t.length > 1 && !t[0].equals("prueba")) return USO; // solo "prueba" admite argumento
+        switch (t[0]) {
             case "pos1": return POS1;
             case "pos2": return POS2;
             case "clear": return CLEAR;
@@ -16,5 +18,11 @@ public enum Subcomando {
             case "prueba": return PRUEBA;
             default: return USO;
         }
+    }
+
+    /** Argumento opcional tras el subcomando ("/isorender prueba 2048" -> "2048"); "" si no hay. */
+    public static String argumento(String linea) {
+        String[] t = linea.trim().split("\\s+", 3);
+        return t.length > 2 ? t[2] : "";
     }
 }
