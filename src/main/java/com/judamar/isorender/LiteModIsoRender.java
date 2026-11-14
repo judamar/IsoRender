@@ -3,6 +3,8 @@ package com.judamar.isorender;
 import com.judamar.isorender.menu.PantallaPrueba;
 import com.judamar.isorender.seleccion.Seleccion;
 import com.judamar.isorender.seleccion.Subcomando;
+import com.judamar.isorender.seleccion.ValidacionMundo;
+import com.judamar.isorender.seleccion.ValidacionRegion;
 import com.mumfrey.liteloader.LiteMod;
 import com.judamar.isorender.render.RenderPrueba;
 import com.mumfrey.liteloader.OutboundChatFilter;
@@ -95,7 +97,17 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
     public void onRender() {
         if (!pruebaPendiente) return;
         pruebaPendiente = false;
-        RenderPrueba.ejecutar(Minecraft.getMinecraft());
+        Minecraft mc = Minecraft.getMinecraft();
+        try {
+            if (mc.world == null || mc.player == null) return;
+            // Punto reutilizable para el futuro /isorender render: validar y luego renderizar la región.
+            String error = ValidacionMundo.validar(seleccion, mc.world, ValidacionRegion.MAX);
+            if (error != null) { decir(mc, error); return; }
+            RenderPrueba.ejecutar(mc, seleccion.region());
+        } catch (Throwable e) {
+            decir(mc, "Error al validar la región: " + e);
+            e.printStackTrace();
+        }
     }
 
     @Override public void onRenderGui(net.minecraft.client.gui.GuiScreen currentScreen) { }

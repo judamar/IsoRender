@@ -21,7 +21,7 @@ import org.lwjgl.opengl.GL11;
 
 /** T-011 (prototipo): render isometrico 8x8x8 a FBO propio y PNG con alfa. Solo lectura del mundo. */
 public final class RenderPrueba {
-    private static final int N = 8, RES = 512;
+    private static final int RES = 512;
     private static final double ELEVACION = 35.264, ROTACION = 45;
 
     private RenderPrueba() { }
@@ -31,20 +31,21 @@ public final class RenderPrueba {
     }
 
     /** Debe llamarse desde el hilo de render (RenderListener.onRender). Nunca lanza. */
-    public static void ejecutar(Minecraft mc) {
+    public static void ejecutar(Minecraft mc, int[] reg) {
         long t0 = System.currentTimeMillis();
         Framebuffer fbo = null;
         boolean attrib = false, mats = false;
         try {
             World w = mc.world;
             if (w == null || mc.player == null) throw new IllegalStateException("no hay mundo cargado");
-            BlockPos origen = new BlockPos(mc.player).add(-N / 2, -N / 2, -N / 2);
+            BlockPos origen = new BlockPos(reg[0], reg[1], reg[2]);
+            int nx = reg[3] - reg[0] + 1, ny = reg[4] - reg[1] + 1, nz = reg[5] - reg[2] + 1;
 
             // (a) Lectura de bloques: solo getBlockState/isBlockLoaded, nunca setBlockState.
             BufferBuilder buf = new BufferBuilder(1 << 18);
             buf.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
             int dibujados = 0;
-            for (BlockPos p : BlockPos.getAllInBox(origen, origen.add(N - 1, N - 1, N - 1))) {
+            for (BlockPos p : BlockPos.getAllInBox(origen, new BlockPos(reg[3], reg[4], reg[5]))) {
                 if (!w.isBlockLoaded(p)) continue;
                 IBlockState s = w.getBlockState(p);
                 if (s.getMaterial() == Material.AIR) continue;
@@ -52,7 +53,7 @@ public final class RenderPrueba {
                 if (mc.getBlockRendererDispatcher().renderBlock(s, p, w, buf)) dibujados++;
             }
             buf.finishDrawing();
-            if (dibujados == 0) throw new IllegalStateException("la region 8x8x8 solo contiene aire");
+            if (dibujados == 0) throw new IllegalStateException("la región solo contiene aire");
 
             // (b) Render fuera de pantalla: aislar estado GL.
             fbo = new Framebuffer(RES, RES, true);
@@ -65,15 +66,15 @@ public final class RenderPrueba {
             fbo.framebufferClear();
 
             // Camara ortografica isometrica: rotX(elevacion) * rotY(rotacion) * traslacion al centro.
-            double r = N * Math.sqrt(3) / 2 + 0.5;
+            double r = Math.sqrt(nx * nx + ny * ny + nz * nz) / 2 + 0.5; // semi-diagonal: cabe en cualquier rotación
             GlStateManager.matrixMode(GL11.GL_PROJECTION);
             GlStateManager.loadIdentity();
-            GlStateManager.ortho(-r, r, -r, r, -64, 64);
+            GlStateManager.ortho(-r, r, -r, r, -256, 256);
             GlStateManager.matrixMode(GL11.GL_MODELVIEW);
             GlStateManager.loadIdentity();
             GlStateManager.rotate((float) ELEVACION, 1, 0, 0);
             GlStateManager.rotate((float) ROTACION, 0, 1, 0);
-            GlStateManager.translate(-(origen.getX() + N / 2.0), -(origen.getY() + N / 2.0), -(origen.getZ() + N / 2.0));
+            GlStateManager.translate(-(origen.getX() + nx / 2.0), -(origen.getY() + ny / 2.0), -(origen.getZ() + nz / 2.0));
 
             GlStateManager.enableDepth();
             GlStateManager.depthFunc(GL11.GL_LEQUAL);
