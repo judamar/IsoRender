@@ -33,4 +33,23 @@ dependencies {
 
 jar {
     extension = 'litemod'
+    from('LICENSE') // RNF-007: la licencia viaja dentro del paquete
 }
+
+// RF-002 (CA-002.2): un paquete sin litemod.json, sin LICENSE o con otra versión no es una entrega válida.
+task validarLitemod {
+    dependsOn jar
+    doLast {
+        def f = jar.archivePath
+        def zip = new java.util.zip.ZipFile(f)
+        try {
+            def faltan = ['litemod.json', 'LICENSE'].findAll { zip.getEntry(it) == null }
+            if (faltan) throw new GradleException("${f.name}: faltan en el paquete: ${faltan.join(', ')}")
+            def meta = new groovy.json.JsonSlurper().parse(zip.getInputStream(zip.getEntry('litemod.json')), 'UTF-8')
+            if (meta.version != project.version) throw new GradleException("litemod.json declara la versión ${meta.version} y el proyecto ${project.version}")
+            if (meta.mcversion != '1.12.2') throw new GradleException("litemod.json declara mcversion ${meta.mcversion}")
+        } finally { zip.close() }
+        println "Paquete válido: ${f.name} (litemod.json y LICENSE presentes, versión ${project.version})"
+    }
+}
+build.dependsOn validarLitemod

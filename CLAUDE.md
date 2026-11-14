@@ -36,6 +36,7 @@ Gradle 4.10.3 (wrapper) con JDK 8 fijado en `gradle.properties`; plugin `com.ana
 ## Estado del proyecto
 - Decidido: enfoque en estructuras con menú interactivo; LiteLoader obligatorio; ejecuta Claude Code con el solicitante como supervisor y probador.
 - Pendiente del solicitante: P-06 (fecha y presupuesto). P-08, P-09, P-12 y P-13 (selección, tamaño máximo, vista previa, ajustes del menú) antes de la épica E3.
+- Licencia decidida: MIT (2026-11-14). Entidades (marcos, pinturas, armor stands): fuera de la v1, tarea opcional T-044.
 - Supuestos activos: comandos `/isorender pos1|pos2|clear|menu|render`, tecla K, región máxima 64³, resolución 512–4096 px, imagen cuadrada, cámara isométrica por defecto (rotación 45°, elevación 35,264°).
 
 ## Definición de terminado

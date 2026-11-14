@@ -93,9 +93,10 @@ Responsables: Analista, Desarrollador (único desarrollador), Solicitante. Los t
 |---|---|---|---|---|---|---|---|
 | T-042 | Render de ítem en la mano y de ítem o bloque por ID | RF-030 | T-019 | 8 | 14 | 26 | 15,0 |
 | T-043 | Corte por altura de la estructura | RF-015 | T-017 | 6 | 10 | 18 | 10,7 |
-| | **Total opcional (sin buffer)** | | | **14** | **24** | **44** | **25,7** |
+| T-044 | Entidades decorativas en el render (marcos de objetos, pinturas, armor stands) | P-11 | T-021 | 8 | 14 | 26 | 15,0 |
+| | **Total opcional (sin buffer)** | | | **22** | **38** | **70** | **40,7** |
 
-Con 15 % de buffer: 29,6 h. No está en el total general.
+Con 15 % de buffer: 46,8 h. T-044 la pidió el solicitante (2026-11-14) tras ver que el marco de objetos no aparece (fuera de la v1). No está en el total general.
 
 # 3. Estimación
 

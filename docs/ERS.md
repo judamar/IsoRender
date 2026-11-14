@@ -1044,7 +1044,7 @@ El mod no usa base de datos. Las entidades de trabajo son:
 | P-02 | ¿LiteLoader es obligatorio o se acepta Forge 1.12.2? | **Resuelta** (13/11/2026) | RF-001, RF-002, RNF-001, RNF-007 | Confirmado: LiteLoader obligatorio; Forge descartado. |
 | P-03 | ¿Solo bloques vanilla o también los de otros mods? | No bloqueante | RF-009, RN-010 | Solo vanilla garantizado. Ver CF-03. |
 | P-04 | ¿Qué resolución máxima y qué ángulo isométrico por defecto? | No bloqueante | RF-017, RF-025 | 512–4096 px; elevación 35,264° y rotación 45°. |
-| P-05 | ¿El mod será público? ¿Con qué licencia? | No bloqueante | RNF-007, RNF-008 | Por definir antes del empaquetado. |
+| P-05 | ¿El mod será público? ¿Con qué licencia? | No bloqueante | RNF-007, RNF-008 | **Resuelta (2026-11-14, solicitante): licencia MIT** (archivo LICENSE en la raíz y dentro del .litemod). |
 | P-06 | ¿Hay fecha límite, presupuesto o cantidad de personas? | **Bloqueante** (para comprometer el plan) | Plan de trabajo | Ejecuta Claude Code; sin fecha límite ni presupuesto; el ritmo lo marcan las verificaciones en juego del solicitante. |
 | P-07 | ¿Idioma de los textos del menú y del chat? | No bloqueante | RNF-011 | Español. |
 | P-08 | ¿Cómo se seleccionan los puntos: comandos, una varita tipo WorldEdit, clic sobre bloques o ambos? | No bloqueante | RF-003, RF-004 | Comandos sobre el bloque apuntado. |
