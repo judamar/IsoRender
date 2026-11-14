@@ -12,7 +12,7 @@ buildscript {
 apply plugin: 'net.minecraftforge.gradle.liteloader'
 
 group = 'com.judamar.isorender'
-version = '0.1.0'
+version = '1.0.0'
 archivesBaseName = 'IsoRender'
 sourceCompatibility = targetCompatibility = '1.8'
 compileJava.options.encoding = 'UTF-8'

@@ -7,7 +7,7 @@ Versión v0.4 (adaptada para ejecución con Claude Code). Basado en la ERS v0.3.
 | **Campo** | **Valor** |
 |---|---|
 | Proyecto | Mod de renders isométricos de estructuras para Minecraft 1.12.2 (LiteLoader) |
-| Cliente / solicitante | @juancho (solicitante) |
+| Cliente / solicitante | El solicitante |
 | Fecha | 13 de noviembre de 2026 |
 | Versión | v0.3 (borrador) |
 | Autor | Analista de software (Claude) |
@@ -75,7 +75,7 @@ Versión v0.4 (adaptada para ejecución con Claude Code). Basado en la ERS v0.3.
 
 | **Rol** | **Descripción** | **Necesidades principales** |
 |---|---|---|
-| Solicitante (@juancho) | Quien pide el mod y valida la entrega. | Definir alcance y licencia; responder preguntas abiertas; aprobar la UAT. |
+| Solicitante | Quien pide el mod y valida la entrega. | Definir alcance y licencia; responder preguntas abiertas; aprobar la UAT. |
 | Usuario final | Jugador o creador de contenido que genera las imágenes de estructuras. | Seleccionar una región, ajustar la cámara con ayuda visual y exportar sin que el juego falle. |
 | Desarrollador / mantenedor | Una persona que construye y mantiene el mod. | Entorno reproducible, requisitos claros y código mantenible. |
 | Analista | Redacta la ERS y el plan; no desarrolla. | Respuestas del solicitante para cerrar preguntas bloqueantes. |
@@ -129,7 +129,7 @@ Añadidos por el analista:
 
 - *\[SUPUESTO\]* Rangos y valores por defecto de cámara en RN-007.
 
-- *\[SUPUESTO\]* Comando /isorender, tecla K y textos en español.
+- *\[SUPUESTO\]* Comando /isorender, tecla K y textos en inglés (cambiado el 2026-11-14 por el solicitante; antes español).
 
 - *\[SUPUESTO\]* RF-027 sube a Must; el render de ítem individual (RF-030) baja a Could.
 
@@ -960,13 +960,13 @@ El solicitante no asignó prioridad a los RNF: todas son *\[SUPUESTO\]*. Los umb
 
 **Categoría:** Idioma \| **Prioridad:** Could
 
-**Descripción:** Los textos del menú y los mensajes del chat deberán estar en español *\[SUPUESTO\]*.
+**Descripción:** Los textos del menú y los mensajes del chat deberán estar en inglés (decisión del solicitante, 2026-11-14, para publicar el mod globalmente; la primera versión del ERS decía español).
 
 **Origen:** *\[SUPUESTO\]* No indicado por el solicitante
 
 **Criterio de aceptación:**
 
-- **Dado** el menú abierto y un render exitoso y uno fallido, **cuando** se leen los textos, **entonces** todos están en español.
+- **Dado** el menú abierto y un render exitoso y uno fallido, **cuando** se leen los textos, **entonces** todos están en inglés.
 
 ### RNF-012: Menú legible y usable
 
@@ -1054,7 +1054,7 @@ El mod no usa base de datos. Las entidades de trabajo son:
 | Menú | Vista previa; deslizadores y campos de rotación, elevación, zoom y desplazamiento; selector de resolución; botones Renderizar, Restablecer y presets; estado de la selección (coordenadas y dimensiones). |
 | Configuración | `<juego>/liteconfig/common/isorender.properties` (directorio de configuración de LiteLoader): carpetaSalida, resolución (512 por defecto, decisión del 2026-11-14), rotación (45), elevación (35,264), zoom (100 %), desplazamientos, vista, fondo, tamanoMaximo (64). El margen (5 %) es una constante, no configurable. |
 | Salida | PNG RGBA de 32 bits, cuadrado N × N, fondo con alfa 0. Nombre: estructura\_\<fecha-hora\>\_\<x1,y1,z1\>\_\<x2,y2,z2\>.png. |
-| Mensajes | Texto en el chat con la ruta del archivo o el error, en español. |
+| Mensajes | Texto en el chat con la ruta del archivo o el error, en inglés. |
 
 # 12. Riesgos
 
@@ -1085,7 +1085,7 @@ El mod no usa base de datos. Las entidades de trabajo son:
 | P-04 | ¿Qué resolución máxima y qué ángulo isométrico por defecto? | No bloqueante | RF-017, RF-025 | 512–4096 px; elevación 35,264° y rotación 45°. |
 | P-05 | ¿El mod será público? ¿Con qué licencia? | No bloqueante | RNF-007, RNF-008 | **Resuelta (2026-11-14, solicitante): licencia MIT** (archivo LICENSE en la raíz y dentro del .litemod). |
 | P-06 | ¿Hay fecha límite, presupuesto o cantidad de personas? | **Bloqueante** (para comprometer el plan) | Plan de trabajo | Ejecuta Claude Code; sin fecha límite ni presupuesto; el ritmo lo marcan las verificaciones en juego del solicitante. |
-| P-07 | ¿Idioma de los textos del menú y del chat? | No bloqueante | RNF-011 | Español. |
+| P-07 | ¿Idioma de los textos del menú y del chat? | **Resuelta** | RNF-011 | Inglés (solicitante, 2026-11-14; inicialmente se asumió español). |
 | P-08 | ¿Cómo se seleccionan los puntos: comandos, una varita tipo WorldEdit, clic sobre bloques o ambos? | No bloqueante | RF-003, RF-004 | Comandos sobre el bloque apuntado. |
 | P-09 | ¿Qué tamaño máximo de estructura se espera y funciona solo con chunks cargados? | No bloqueante | RF-007, RN-003, RNF-002, RNF-014 | 64 × 64 × 64 y solo chunks cargados. |
 | P-10 | ¿Se usará en un jugador, en servidores o en ambos? | No bloqueante | RF-003, RN-004 | Ambos, como mod de cliente. |

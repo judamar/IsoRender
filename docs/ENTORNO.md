@@ -13,14 +13,14 @@
 
 ## Comandos
 - Preparar (una vez): `./gradlew setupDecompWorkspace`
-- Compilar y probar: `./gradlew build` → `build/libs/mod-isorender-0.1.0-mc1.12.2.litemod`
+- Compilar y probar: `./gradlew build` → `build/libs/mod-isorender-1.0.0-mc1.12.2.litemod`
 - Instalar en el cliente de pruebas: copiar el `.litemod` a `<instancia>/minecraft/mods/`
 
 ## Problema conocido
 Con caché de Gradle limpia, `setupDecompWorkspace` falla con `ZipException: invalid entry compressed size` (JDK 8u512). Solución: re-empaquetar con compresión STORED todos los `*-sources.jar` de `~/.gradle/caches/modules-2/files-2.1` y borrar `~/.gradle/caches/minecraft/deobfedDeps/**/*sources*`.
 
 ## Verificación de T-005
-El log del cliente (`latest.log`) muestra `Successfully added mod IsoRender version 0.1.0` e `Initialising mod IsoRender`. Aviso inocuo: falta `libfliteWrapper.so` (Narrator).
+El log del cliente (`latest.log`) muestra `Successfully added mod IsoRender version 1.0.0` e `Initialising mod IsoRender`. Aviso inocuo: falta `libfliteWrapper.so` (Narrator).
 
 ## Hallazgos del prototipo T-011 (observados por el solicitante en el juego)
 - Fondo opaco (alfa 255) en vez de transparente → corregir en T-019 (RF-011, riesgo RP-06).

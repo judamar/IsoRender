@@ -14,7 +14,7 @@ Un mod de cliente para Minecraft 1.12.2, cargado con LiteLoader y entregado como
 - El mod es de solo lectura: **nunca modifica bloques ni entidades del mundo**.
 - No copiar código ni recursos de isometric-renders (gliscowo) sin verificar y cumplir su licencia.
 - Un fallo de selección, render o menú **no debe cerrar el juego**: se informa en el chat y se restaura el estado gráfico.
-- Código organizado por paquetes (selección, render, menú, configuración), con comentarios en los puntos de render. Textos al usuario en español.
+- Código organizado por paquetes (selección, render, menú, configuración), con comentarios en los puntos de render. Textos al usuario del mod en inglés (decisión del solicitante, 2026-11-14, para publicarlo globalmente); los comentarios del código y los documentos internos de `docs/` (ERS, PLAN, casos de prueba) siguen en español.
 - Alcance v1: ver ERS §3. Fuera: WebSocket, atlas, mobs/jugadores/ítems en el suelo, regiones mayores de 64×64×64, otros loaders, lote. Opcionales E10 pedidos por el solicitante el 2026-11-14 y ya dentro del alcance: marcos de objetos, pinturas y armor stands (T-044), corte por altura (T-043) e ítem por ID o en la mano (T-042).
 
 ## Cómo trabajar
@@ -28,7 +28,7 @@ Un mod de cliente para Minecraft 1.12.2, cargado con LiteLoader y entregado como
 ## Comandos de build y ejecución
 Gradle 4.10.3 (wrapper) con JDK 8 fijado en `gradle.properties`; plugin `com.anatawa12.forge:ForgeGradle:2.3-1.0.+` (liteloader), MCP `snapshot_20170624`, LiteLoader `1.12.2-SNAPSHOT`, JUnit 4.12.
 - Preparar entorno (una vez): `./gradlew setupDecompWorkspace`
-- Build + pruebas: `./gradlew build` → `build/libs/mod-isorender-0.1.0-mc1.12.2.litemod`
+- Build + pruebas: `./gradlew build` → `build/libs/mod-isorender-1.0.0-mc1.12.2.litemod`
 - Solo pruebas: `./gradlew test`; una clase: `./gradlew test --tests com.judamar.isorender.SmokeTest`
 - Paquetes: `com.judamar.isorender.{seleccion,render,menu,configuracion}`; `litemod.json` es manual en `src/main/resources`.
 - Con caché limpia, `setupDecompWorkspace` falla con `ZipException: invalid entry compressed size` (JDK 8u512): hay que re-empaquetar los `*-sources.jar` de `~/.gradle/caches/modules-2` sin compresión (STORED) y borrar `~/.gradle/caches/minecraft/deobfedDeps/*sources*`. Documentar en T-007.
@@ -36,8 +36,8 @@ Gradle 4.10.3 (wrapper) con JDK 8 fijado en `gradle.properties`; plugin `com.ana
 ## Estado del proyecto
 - Decidido: enfoque en estructuras con menú interactivo; LiteLoader obligatorio; ejecuta Claude Code con el solicitante como supervisor y probador.
 - Pendiente del solicitante: P-06 (fecha y presupuesto). P-08, P-09, P-12 y P-13 (selección, tamaño máximo, vista previa, ajustes del menú) antes de la épica E3.
-- Licencia decidida: MIT (2026-11-14). El solicitante pidió (2026-11-14) implementar las tareas opcionales T-042, T-043 y T-044.
-- Supuestos activos: comandos `/isorender pos1|pos2|clear|menu|render`, tecla K, región máxima 64³, resolución 512–4096 px, imagen cuadrada, cámara isométrica por defecto (rotación 45°, elevación 35,264°).
+- Versión 1.0.0 publicada en GitHub (cuenta judamar) con README y wiki en inglés. Licencia decidida: MIT (2026-11-14). El solicitante pidió (2026-11-14) implementar las tareas opcionales T-042, T-043 y T-044.
+- Supuestos activos: comandos `/isorender pos1|pos2|clear|menu|render|item` (y de depuración `test`, `test-multi`, `stress`), tecla K, región máxima 64³, resolución 512–4096 px, imagen cuadrada, cámara isométrica por defecto (rotación 45°, elevación 35,264°).
 
 ## Definición de terminado
 Compila con JDK 8; pasan los casos de prueba de los requisitos Must; sin defectos críticos ni altos; probado en cliente vanilla 1.12.2 con LiteLoader limpio; documentación al día; aprobado por el solicitante.

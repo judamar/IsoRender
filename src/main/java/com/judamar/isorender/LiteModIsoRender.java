@@ -54,7 +54,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
     private Estres estres;
 
     @Override public String getName() { return "IsoRender"; }
-    @Override public String getVersion() { return "0.1.0"; }
+    @Override public String getVersion() { return "1.0.0"; }
     @Override public void upgradeSettings(String version, File configPath, File oldConfigPath) { }
 
     @Override

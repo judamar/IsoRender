@@ -1,362 +1,373 @@
-# Manual de usuario de IsoRender (T-038)
+# IsoRender user manual (T-038)
 
-Versión del mod: 0.1.0 · Minecraft 1.12.2 · LiteLoader 1.12.2 · Licencia MIT
+Mod version: 1.0.0 · Minecraft 1.12.2 · LiteLoader 1.12.2 · MIT license
 
-Requisitos cubiertos: RF-003 (selección), RF-016 (menú), RF-028 (configuración). Para quien programa el mod, ver `docs/TECNICA.md`.
+Requirements covered: RF-003 (selection), RF-016 (menu), RF-028 (configuration). For people who work on the mod's code, see `docs/TECNICA.md`. The text shown by the mod (chat, menu, errors) is in English; the internal project documents `ERS.md`, `PLAN.md` and `CASOS-PRUEBA.md` are in Spanish.
 
-## 1. Qué hace IsoRender
+## 1. What IsoRender does
 
-IsoRender convierte una construcción de tu mundo en una imagen PNG con fondo transparente. Marcas dos esquinas (punto 1 y punto 2), abres un menú donde ves una vista previa en vivo, ajustas la cámara y pulsas **Renderizar**. El mod guarda el PNG en una carpeta de tu juego y te dice la ruta en el chat.
+IsoRender turns a build in your world into a PNG image with a transparent background. You mark two corners (point 1 and point 2), open a menu with a live preview, adjust the camera and press **Render**. The mod saves the PNG in a folder of your game and prints the path in the chat.
 
-- La vista por defecto es isométrica (rotación 45°, elevación 35,264°). También hay vista en perspectiva.
-- La imagen es cuadrada, de 512 a 4096 píxeles de lado, con bordes suavizados y sin halos.
-- Se dibujan bloques, bloques con entidad (cofres, camas, carteles, cabezas...) y marcos de objetos, pinturas y armor stands.
-- El mod es solo de lectura: **nunca cambia bloques ni entidades de tu mundo**.
-- Si algo falla (selección, render o menú), te avisa en el chat en español y el juego sigue abierto.
+- The default view is isometric (rotation 45°, elevation 35.264°). A perspective view is also available.
+- The image is square, from 512 to 4096 pixels per side, with smoothed edges and no halos.
+- Blocks, block entities (chests, beds, signs, heads...) and item frames, paintings and armor stands are drawn.
+- The mod is read-only: it **never changes blocks or entities in your world**.
+- If something fails (selection, render or menu), it tells you in the chat and the game stays open.
 
-## 2. Requisitos e instalación
+## 2. Requirements and installation
 
-| Necesitas | Detalle |
+| You need | Detail |
 |---|---|
-| Minecraft | Java Edition 1.12.2 (cliente) |
-| LiteLoader | LiteLoader 1.12.2 instalado en ese perfil. **No se usa Forge.** |
-| Gráficos | GPU con OpenGL y framebuffers (cualquier equipo que ejecute 1.12.2). Para 4096 px con bordes suavizados hace falta una GPU con textura máxima de 8192 px (ver §11). |
+| Minecraft | Java Edition 1.12.2 (client) |
+| LiteLoader | LiteLoader 1.12.2 installed in that profile. **Forge is not used.** |
+| Graphics | A GPU with OpenGL and framebuffer support (any machine that runs 1.12.2). For 4096 px with smoothed edges the GPU needs a maximum texture size of 8192 px (see §11). |
 
-Instalación:
+Installation:
 
-1. Instala LiteLoader 1.12.2 en tu perfil de Minecraft 1.12.2 (sigue las instrucciones de LiteLoader).
-2. Copia el archivo `mod-isorender-0.1.0-mc1.12.2.litemod` a la carpeta `mods` de tu juego (`<directorio del juego>/mods/`). No hay que descomprimirlo.
-3. Inicia el juego con el perfil de LiteLoader. En el menú de mods de LiteLoader debe aparecer «IsoRender 0.1.0».
-4. Entra a un mundo. En el chat verás `[IsoRender] Mod cargado (v0.1.0).` cada vez que entras a un mundo.
+1. Install LiteLoader 1.12.2 in your Minecraft 1.12.2 profile (follow LiteLoader's own instructions).
+2. Copy `mod-isorender-1.0.0-mc1.12.2.litemod` into the `mods` folder of your game (`<game directory>/mods/`). Do not unzip it.
+3. Start the game with the LiteLoader profile. LiteLoader's mod list should show "IsoRender 1.0.0".
+4. Enter a world. Each time you enter a world the chat shows `[IsoRender] Mod loaded (v1.0.0).`
 
-El mod solo funciona en el cliente: sirve en un mundo de un jugador y en servidores, porque los comandos `/isorender` se interceptan en tu cliente y no se envían al servidor.
+The mod is client-side only: the `/isorender` commands are intercepted on your client and are not sent to the server. It was tested in single-player; on a server it can only see the chunks your client has loaded.
 
-## 3. Flujo rápido
+## 3. Quick start
 
-1. Apunta a una esquina de la construcción y escribe `/isorender pos1`.
-2. Apunta a la esquina opuesta y escribe `/isorender pos2`. El chat muestra el tamaño de la región.
-3. Pulsa la tecla **K** (o escribe `/isorender menu`) para abrir el menú.
-4. Ajusta la cámara mirando la vista previa.
-5. Pulsa **Renderizar**. El menú se cierra y, en el siguiente fotograma, el mod genera el PNG y escribe la ruta en el chat (la ruta es clicable: abre la imagen).
+1. Aim at one corner of the build and type `/isorender pos1`.
+2. Aim at the opposite corner and type `/isorender pos2`. The chat shows the size of the region.
+3. Press the **K** key (or type `/isorender menu`) to open the menu.
+4. Adjust the camera while watching the preview.
+5. Press **Render**. The menu closes and, on the next frame, the mod generates the PNG and writes the path in the chat (the path is clickable: it opens the image).
 
-Con una selección completa también puedes renderizar sin abrir el menú: `/isorender render` usa la cámara y la resolución que tenías en el menú.
+With a complete selection you can also render without opening the menu: `/isorender render` uses the camera, resolution and Y cut you had in the menu.
 
-## 4. Seleccionar la región
+## 4. Selecting the region
 
-### 4.1 Fijar los puntos
+### 4.1 Setting the points
 
-| Comando | Qué hace |
+| Command | What it does |
 |---|---|
-| `/isorender pos1` | Fija el punto 1 en el bloque al que apuntas. |
-| `/isorender pos2` | Fija el punto 2 de la misma forma. |
-| `/isorender clear` | Borra ambos puntos. Responde «Selección borrada.» o «No había ninguna selección.» |
+| `/isorender pos1` | Sets point 1 on the block you are aiming at. |
+| `/isorender pos2` | Sets point 2 the same way. |
+| `/isorender clear` | Clears both points. Answers "Selection cleared." or "There was no selection to clear." |
 
-- **Bloque apuntado:** si tu mira está sobre un bloque (dentro del alcance normal de interacción), se usa ese bloque.
-- **Sin apuntar a un bloque:** se usa el bloque sobre el que estás de pie (el que está justo debajo de tus pies) y el chat lo indica.
-- Repetir `pos1` o `pos2` reemplaza el punto anterior.
-- El orden no importa: la región es la caja que contiene ambos puntos, **inclusive**. Si los dos puntos son el mismo bloque, la región es de 1 × 1 × 1.
-- Ejemplo: pos1 en (0, 64, 0) y pos2 en (9, 69, 4) dan una región de 10 × 6 × 5 bloques. El chat lo escribe como `Región: 10 × 6 × 5 bloques.`
+- **Aimed block:** if your crosshair is on a block (within normal interaction reach), that block is used. The chat says `[targeted block]`.
+- **Not aiming at a block:** the block you are standing on (the one right under your feet) is used, and the chat says so (`[you are not looking at a block; using the block you are standing on]`).
+- Repeating `pos1` or `pos2` replaces the previous point.
+- The order does not matter: the region is the box that contains both points, **inclusive**. If both points are the same block, the region is 1 × 1 × 1.
+- Example: pos1 at (0, 64, 0) and pos2 at (9, 69, 4) give a region of 10 × 6 × 5 blocks. The chat writes it as `Region: 10 × 6 × 5 blocks.`
+- The full confirmation looks like `[IsoRender] Point 1 set at (0, 64, 0) [targeted block].`
 
-### 4.2 Contorno
+### 4.2 Outline
 
-Mientras haya al menos un punto, el mod dibuja en el mundo un contorno amarillo con la caja de la selección. Se ve desde dentro y desde fuera, y también a través de los bloques (más tenue). Desaparece con `/isorender clear`.
+While at least one point is set, the mod draws a yellow outline of the selection box in the world. It is visible from inside and outside, and also through blocks (fainter). It disappears with `/isorender clear`.
 
-### 4.3 Límites y validaciones
+### 4.3 Limits and validations
 
-Antes de renderizar (con el botón, con `/isorender render` y también en la vista previa) el mod comprueba:
+Before rendering (with the button, with `/isorender render` and also in the preview) the mod checks:
 
-| Regla | Detalle |
+| Rule | Detail |
 |---|---|
-| Hay dos puntos | Si falta alguno, te dice cuál. |
-| Tamaño máximo | **64 × 64 × 64** bloques por eje (se puede bajar con `tamanoMaximo`, nunca subir de 64; ver §9). |
-| Chunks cargados | Todos los chunks que toca la región deben estar cargados en tu cliente. Acércate si no lo están. |
-| No solo aire | Debe haber al menos un bloque que no sea aire. |
+| Two points exist | If one is missing, it tells you which. |
+| Maximum size | **64 × 64 × 64** blocks per axis (can be lowered with `maxSize`, never raised above 64; see §9). |
+| Loaded chunks | Every chunk the region touches must be loaded in your client. Move closer if they are not. |
+| Not only air | There must be at least one block that is not air. |
 
-Mod de cliente: solo ve lo que tu cliente tiene cargado. En un servidor, la distancia de renderizado limita qué zonas puedes capturar.
+It is a client mod: it only sees what your client has loaded. On a server, the render distance limits which areas you can capture.
 
-## 5. El menú
+## 5. The menu
 
-Se abre con **K** o `/isorender menu` (solo si no hay otra pantalla abierta: no se abre con el inventario o el chat abiertos). No pausa el juego. Se cierra con **Esc** o con el botón **Cerrar**; la tecla K no lo cierra.
+It opens with **K** or `/isorender menu` (only if no other screen is open: it does not open over the inventory or the chat). It does not pause the game. Close it with **Esc** or the **Close** button; the K key does not close it. The key binding is listed as "Open IsoRender menu" in the "IsoRender" category of Options > Controls.
 
-Disposición de arriba abajo:
+Layout from top to bottom:
 
 ```
-            IsoRender
-   Región: 10 × 6 × 5 bloques            (verde si la selección está completa; naranja si falta algo)
- [ Rotación: 45° .......... ] [ 45 ]    +----------------------+
- [ Elevación: 35,3° ....... ] [35,3]    |                      |
- [ Zoom: 100 % ............ ] [ 100 ]   |     VISTA PREVIA     |
- [ Desp. X: 0 % ........... ] [  0  ]   |                      |
- [ Desp. Y: 0 % ........... ] [  0  ]   |                      |
- [ Fondo: Tablero ] [ Vista: Isométrica ]|                      |
- [ Resolución: 512 px ...... ] [ 512 ]  +----------------------+
- [Isométrica][Frontal][Superior]              [ Renderizar ]
- Corte Y (vacío = sin corte)   [     ]        [   Cerrar   ]
- Rango válido: 64..69
- [Restablecer]  (mensaje de error en rojo)
+              IsoRender
+   Region: 10 × 6 × 5 blocks           (green if the selection is complete; orange if something is missing)
+ [ Rotation: 45° .......... ] [ 45 ]     +----------------------+
+ [ Elevation: 35.3° ....... ] [35.3]     |                      |
+ [ Zoom: 100% ............. ] [ 100 ]    |       PREVIEW        |
+ [ Offset X: 0% ........... ] [  0  ]    |                      |
+ [ Offset Y: 0% ........... ] [  0  ]    |                      |
+ [ Background: Checkerboard ][ View: Isometric ]                 |
+ [ Resolution: 512 px ..... ] [ 512 ]    +----------------------+
+ [Isometric][Front][Top]                       [   Render   ]
+ Cut Y (empty = no cut)   [     ]              [   Close    ]
+ Valid range: 64..69
+ [Reset]  (error message in red)
 ```
 
-### 5.1 Cámara: rotación, elevación, zoom y desplazamiento
+### 5.1 Camera: rotation, elevation, zoom and offset
 
-Cada ajuste tiene un deslizador (arrastra con el ratón; avanza en pasos enteros) y un campo numérico a la derecha (admite decimales).
+Each setting has a slider (drag with the mouse; it moves in whole steps) and a numeric field on the right (accepts decimals).
 
-| Ajuste | Rango | Por defecto | Qué hace |
+| Setting | Range | Default | What it does |
 |---|---|---|---|
-| Rotación | 0 a 359° | 45° | Gira la cámara alrededor de la estructura. |
-| Elevación | 5 a 90° | 35,264° | Altura de la cámara: 5° casi de frente, 90° desde arriba. |
-| Zoom | 25 a 400 % | 100 % | Acerca o aleja. A 100 % la estructura completa cabe con un margen del 5 %. |
-| Desp. X | -100 a 100 % | 0 % | Mueve la estructura a derecha (+) o izquierda (-) de la imagen. |
-| Desp. Y | -100 a 100 % | 0 % | Mueve la estructura hacia arriba (+) o abajo (-). |
+| Rotation | 0 to 359° | 45° | Turns the camera around the structure. |
+| Elevation | 5 to 90° | 35.264° | Camera height: 5° is almost level, 90° is straight down. |
+| Zoom | 25 to 400% | 100% | Zooms in or out. At 100% the whole structure fits with a 5% margin. |
+| Offset X | -100 to 100% | 0% | Moves the structure right (+) or left (-) in the image. |
+| Offset Y | -100 to 100% | 0% | Moves the structure up (+) or down (-). |
 
-El desplazamiento se mide como porcentaje del semi-ancho de la imagen. La estructura se encuadra automáticamente (centrada y con margen) para cualquier rotación y elevación; el zoom y el desplazamiento se aplican encima.
+The offset is measured as a percentage of the image half-width. The structure is framed automatically (centered and with a margin) for any rotation and elevation; zoom and offset are applied on top.
 
-**Entrada numérica:** haz clic en un campo, escribe el valor (coma o punto decimal) y confirma con **Intro**, con **Esc** (solo cierra el campo, no el menú) o haciendo clic fuera. Un valor fuera de rango se ajusta al límite más cercano. Si lo escrito no es un número, el campo recupera el valor anterior y aparece un mensaje en rojo junto al botón Restablecer (por ejemplo «Rotación no válido: «abc». Escribe un número.»).
+**Numeric input:** click a field, type the value (decimal point or comma) and confirm with **Enter**, with **Esc** (only closes the field, not the menu) or by clicking elsewhere. A value out of range is clamped to the nearest limit. If what you typed is not a number, the field goes back to the previous value and a red message appears next to the Reset button (for example `Rotation is not a valid number: "abc".`).
 
-### 5.2 Fondo de la vista previa
+### 5.2 Preview background
 
-El botón **Fondo** cicla entre Tablero, Blanco, Gris, Negro y Verde croma. El tablero de ajedrez deja ver qué zonas son transparentes. **Solo cambia la vista previa:** el PNG exportado siempre tiene fondo transparente. El fondo elegido se guarda en la configuración.
+The **Background** button cycles through Checkerboard, White, Gray, Black and Chroma green. The checkerboard shows which areas are transparent. **It only changes the preview:** the exported PNG always has a transparent background. The chosen background is saved in the configuration. If the text does not fit in the button it is shortened (for example `Bg: Checkerboard`).
 
-### 5.3 Vista Isométrica o Perspectiva
+### 5.3 Isometric or Perspective view
 
-El botón **Vista** alterna entre «Isométrica» (proyección ortográfica, sin deformación por distancia; es la de por defecto) y «Perspectiva» (campo de visión fijo de 30°; las partes cercanas se ven mayores). Afecta a la vista previa y al PNG. En perspectiva el zoom y el desplazamiento mueven la ventana de la imagen, la cámara no se acerca. Si el texto no cabe en el botón se abrevia («Persp.» / «Isom.»).
+The **View** button toggles between "Isometric" (orthographic projection, no distance distortion; the default) and "Perspective" (fixed 30° field of view; nearby parts look bigger). It affects both the preview and the PNG. In perspective, zoom and offset move the image window; the camera does not move closer. If the text does not fit in the button it is shortened ("View: Persp." / "View: Iso.").
 
-### 5.4 Resolución
+### 5.4 Resolution
 
-El botón **Resolución** cicla por 512, 1024, 2048 y 4096 px (desde un valor intermedio salta al siguiente mayor; desde 4096 vuelve a 512). El campo de al lado acepta cualquier entero entre **512 y 4096**. Fuera de rango muestra «Resolución fuera de rango: N px. Debe estar entre 512 y 4096 px.» y conserva el valor anterior. Un campo vacío equivale a 512. La imagen siempre es cuadrada (N × N).
+The **Resolution** button cycles through 512, 1024, 2048 and 4096 px (from an in-between value it jumps to the next larger one; from 4096 it goes back to 512). The field next to it accepts any integer from **512 to 4096**. Out of range it shows `Resolution out of range: N px. Must be between 512 and 4096 px.` and keeps the previous value; text that is not an integer shows `Invalid resolution: "abc". Use an integer between 512 and 4096 px.` An empty field is equivalent to 512. The image is always square (N × N).
 
 ### 5.5 Presets
 
-Tres botones ponen rotación y elevación de golpe; no cambian el zoom, el desplazamiento ni la vista:
+Three buttons set rotation and elevation at once; they do not change zoom, offset or view:
 
-| Preset | Rotación | Elevación |
+| Preset | Rotation | Elevation |
 |---|---|---|
-| Isométrica | 45° | 35,264° |
-| Frontal | 0° | 5° (el mínimo permitido) |
-| Superior | 0° | 90° |
+| Isometric | 45° | 35.264° |
+| Front | 0° | 5° (the minimum allowed) |
+| Top | 0° | 90° |
 
-### 5.6 Corte Y
+### 5.6 Cut Y
 
-Escribe una altura **Y absoluta** (la misma que ves en F3) y confirma. Se dibujan solo los bloques con Y menor o igual a ese valor: sirve para ver el interior quitando las capas de arriba. La vista previa y el PNG muestran el corte, y el encuadre se ajusta a lo que queda visible.
+Type an **absolute Y** height (the same one you see in F3) and confirm. Only blocks with Y less than or equal to that value are drawn: useful to see the interior by removing the top layers. The preview and the PNG show the cut, and the framing adjusts to what remains visible.
 
-- Campo vacío = sin corte. Debajo de la etiqueta aparece «Rango válido: y1..y2» con las alturas de tu región.
-- Un valor menor que y1 o igual o mayor que y2 se ignora y **se dibuja todo** (no hay error).
-- Un valor que no sea un entero da un error en rojo y se conserva el anterior.
-- El nombre del PNG usa la caja recortada (y2 = el corte).
-- El corte **no se guarda** en la configuración y **Restablecer no lo borra**. Se mantiene mientras el juego esté abierto, también si cierras y reabres el menú.
+- Empty field = no cut. Under the label, "Valid range: y1..y2" shows the heights of your region.
+- A value below y1, or equal to or above y2, is ignored and **everything is drawn** (no error, no message).
+- A value that is not an integer shows `Invalid cut Y: "abc". Enter an integer or leave it empty.` in red and keeps the previous one.
+- The PNG name uses the cut box (y2 = the cut).
+- The cut is **not saved** in the configuration and **Reset does not clear it**. It stays while the game is open, also if you close and reopen the menu.
 
-### 5.7 Restablecer
+### 5.7 Reset
 
-Devuelve la cámara a los valores por defecto (rotación 45°, elevación 35,264°, zoom 100 %, desplazamiento 0 y vista Isométrica). **No** cambia el fondo, la resolución ni el corte Y.
+Returns the camera to its defaults (rotation 45°, elevation 35.264°, zoom 100%, offset 0 and Isometric view). It does **not** change the background, the resolution or the Y cut.
 
-### 5.8 Renderizar y Cerrar
+### 5.8 Render and Close
 
-- **Renderizar** (se pone gris si la selección no está completa): cierra el menú y genera el PNG con la cámara, la resolución y el corte actuales. Como el menú se cierra, no se puede pulsar dos veces. Si ya hay otro render en curso, el chat dice «Ya hay un render en curso o pendiente; espera a que termine.»
-- **Cerrar:** cierra el menú. También lo hace Esc fuera de un campo de texto.
+- **Render** (greyed out if the selection is not complete): closes the menu and generates the PNG with the current camera, resolution and cut. Because the menu closes, you cannot press it twice. If another render is already in progress, the chat says `A render is already running or pending; wait for it to finish.`
+- **Close:** closes the menu. Esc does the same when no text field is active.
 
-Al cerrar el menú (por cualquier vía) se guarda en `isorender.properties` tu último ajuste de cámara, vista, resolución y fondo, y el menú los recupera la próxima vez, incluso tras reiniciar el juego.
+When the menu closes (by any route) your latest camera, view, resolution and background are saved to `isorender.properties` (only if something changed), and the menu restores them next time, including after restarting the game.
 
-### 5.9 La vista previa
+### 5.9 The preview
 
-El recuadro de la derecha muestra la estructura en vivo y se actualiza al mover cualquier control. En lugar de la imagen puede mostrar un texto:
+The box on the right shows the structure live and updates whenever a control moves. Instead of the image it can show a text:
 
-| Texto | Significado |
+| Text | Meaning |
 |---|---|
-| «Falta definir la selección (usa /isorender pos1 y pos2)» o «Falta el punto N…» | La selección está incompleta. |
-| Mensaje de validación | Región demasiado grande, chunks sin cargar o solo aire (ver §10). |
-| «Preparando vista previa…» | Está leyendo la región (tarda un instante). |
-| «Hay un render en curso; la vista previa espera.» | Hay un render real ejecutándose. |
-| Mensaje de error | La vista previa falló (por ejemplo, falta de memoria); el menú sigue abierto. |
-| «Ventana demasiado pequeña para la vista previa» | La ventana no deja sitio para el recuadro (el lado mínimo es de 64 px de interfaz). |
+| `Selection not set (use /isorender pos1 and pos2)` or `Point N is missing (use /isorender posN)` | The selection is incomplete. |
+| A validation message | Region too large, chunks not loaded or only air (see §10). |
+| `Preparing preview…` | It is reading the region (takes a moment). |
+| `A render is in progress; the preview is waiting.` | A real render is running. |
+| An error message | The preview failed (for example, out of memory); the menu stays open. |
+| `Window too small for the preview` | The window leaves no room for the box (the minimum side is 64 GUI pixels). |
 
-**Modo simplificado:** si la región tiene más de 32 × 32 × 32 bloques de volumen (más de 32.768 bloques, tras aplicar el corte Y), la vista previa baja su calidad para mantener fluidez: imagen interna de hasta 256 px (frente a 512), reordena las transparencias como mucho cada 0,3 s y **no dibuja entidades** (cofres, camas, marcos...). Lo indica el texto «Vista simplificada (región grande)» bajo el recuadro. El PNG final siempre se dibuja con calidad completa y con entidades.
+**Simplified mode:** if the region has more than 32 × 32 × 32 blocks of volume (more than 32,768 blocks, after applying the Y cut), the preview lowers its quality to stay smooth: internal image of up to 256 px (instead of 512), it re-sorts transparencies at most every 0.3 s and it **does not draw entities** (chests, beds, frames...). The text `Simplified view (large region)` under the box indicates it. The final PNG is always drawn at full quality and with entities.
 
-La vista previa es una aproximación: el PNG final usa suavizado de bordes por supermuestreo.
+The preview is an approximation: the final PNG uses supersampling for edge smoothing.
 
-## 6. Comandos
+## 6. Commands
 
-Todos empiezan por `/isorender` (en minúsculas) y los atiende tu cliente; no llegan al servidor. No hay autocompletado con Tab. Un subcomando desconocido, o argumentos de más, muestra la línea de uso.
+All start with `/isorender` (lowercase) and are handled by your client; they do not reach the server. There is no Tab completion. An unknown subcommand, or extra arguments, shows the usage line:
 
-| Comando | Qué hace |
+`[IsoRender] Usage: /isorender pos1 | pos2 | clear | menu | render | test [size 512-4096] [rotation 0-359] [elevation 5-90] [zoom 25-400] [view iso|persp] | test-multi [n 2-8] | stress [n 1-50] | item [id] [meta]`
+
+| Command | What it does |
 |---|---|
-| `/isorender pos1` / `pos2` | Fija el punto 1 / 2 (§4). |
-| `/isorender clear` | Borra la selección. |
-| `/isorender menu` | Abre el menú (igual que la tecla K). |
-| `/isorender render` | Renderiza la región con la cámara, resolución y corte Y del menú. No admite argumentos: para cambiar la resolución usa el menú o la configuración. |
-| `/isorender item [id] [meta]` | Renderiza un ítem o bloque suelto (§6.1). |
-| `/isorender prueba [lado] [rotación] [elevación] [zoom] [vista]` | Comando de pruebas (§6.2). |
-| `/isorender prueba-multi [n]` | Comando de pruebas (§6.2). |
-| `/isorender estres [n]` | Comando de pruebas (§6.2). |
+| `/isorender pos1` / `pos2` | Sets point 1 / 2 (§4). |
+| `/isorender clear` | Clears the selection. |
+| `/isorender menu` | Opens the menu (same as the K key). |
+| `/isorender render` | Renders the region with the camera, resolution and Y cut of the menu. Takes no arguments: to change the resolution use the menu or the configuration. |
+| `/isorender item [id] [meta]` | Renders a single item or block (§6.1). |
+| `/isorender test [size] [rotation] [elevation] [zoom] [view]` | Debug command (§6.2). |
+| `/isorender test-multi [n]` | Debug command (§6.2). |
+| `/isorender stress [n]` | Debug command (§6.2). |
 
 ### 6.1 `/isorender item [id] [meta]`
 
-No necesita selección ni menú. Dibuja el ítem tal como se ve en el inventario, con fondo transparente y la **resolución** del menú; ignora la rotación, elevación, zoom y vista del menú. No hay corte Y.
+Needs no selection and no menu. It draws the item as it looks in the inventory, with a transparent background and the menu's **resolution**; it ignores the menu's rotation, elevation, zoom and view. There is no Y cut.
 
-| Ejemplo | Resultado |
+| Example | Result |
 |---|---|
-| `/isorender item` | El ítem de tu mano principal; si está vacía, el de la mano secundaria. Si ambas están vacías: «No tienes ningún ítem en la mano.» |
-| `/isorender item minecraft:diamond_sword` | Ese ítem. El prefijo `minecraft:` es opcional (`stone` también vale). |
-| `/isorender item minecraft:wool 14` | Lana roja: el segundo argumento es la metadata (entero de 0 a 32767). |
-| `/isorender item minecraft:stained_glass 3` | Cristal tintado, translúcido. |
+| `/isorender item` | The item in your main hand; if empty, the one in your off hand. If both are empty: `You are not holding any item.` |
+| `/isorender item minecraft:diamond_sword` | That item. The `minecraft:` prefix is optional (`stone` also works). |
+| `/isorender item minecraft:wool 14` | Red wool: the second argument is the metadata (integer from 0 to 32767). |
+| `/isorender item minecraft:stained_glass 3` | Stained glass, translucent. |
 
-Errores: id inexistente («No existe el ítem o bloque «x».»), bloque sin forma de ítem como el agua («El bloque «water» no tiene forma de ítem y no se puede renderizar.»), metadata no válida o fuera de rango, o más de dos argumentos («Demasiados argumentos. Uso: /isorender item [id] [meta]»). En todos los casos no se crea archivo. El ítem de tu mano no se modifica (se trabaja sobre una copia).
+Errors: unknown id (`Unknown item or block "x".`), a block with no item form such as water (`The block "water" has no item form and cannot be rendered.`), invalid or out-of-range metadata (`Invalid metadata: "x". Use an integer between 0 and 32767.` / `Metadata out of range: 40000. Must be between 0 and 32767.`), or more than two arguments (`Too many arguments. Usage: /isorender item [id] [meta]`). In every case no file is created. The item in your hand is not modified (a copy is used).
 
-### 6.2 Comandos de prueba
+### 6.2 Debug commands
 
-Son herramientas de desarrollo; usan la selección actual y no pasan por el menú. **Escriben en `<directorio del juego>/isorender-test/`, no en la carpeta de salida configurada.**
+These are development tools; they use the current selection and do not go through the menu. **They write to `<game directory>/isorender-test/`, not to the configured output folder.**
 
-| Comando | Argumentos | Por defecto | Qué hace |
+| Command | Arguments | Default | What it does |
 |---|---|---|---|
-| `/isorender prueba` | `[lado 512-4096] [rotación 0-359] [elevación 5-90] [zoom 25-400] [vista iso\|persp]`, en ese orden | 512, 45, 35,264, 100, iso | Un PNG `prueba-<lado>-<milisegundos>.png`. Sin desplazamiento ni corte. |
-| `/isorender prueba-multi` | `[n 2-8]` | 4 | `n` PNG de 512 px con la rotación repartida en 360° (`multi-<marca>-<i>of<n>-rot<grados>.png`). El chat informa el tiempo de construcción y el tiempo medio de dibujo. |
-| `/isorender estres` | `[n 1-50]` | 30 | `n` renders de 512 px, uno por fotograma, sin guardar archivos. Al final informa tiempo medio, variación de memoria y errores de OpenGL. |
+| `/isorender test` | `[size 512-4096] [rotation 0-359] [elevation 5-90] [zoom 25-400] [view iso\|persp]`, in that order | 512, 45, 35.264, 100, iso | One PNG `test-<size>-<milliseconds>.png`. No offset and no cut. |
+| `/isorender test-multi` | `[n 2-8]` | 4 | `n` PNGs of 512 px with the rotation spread over 360° (`multi-<stamp>-<i>of<n>-rot<degrees>.png`). The chat reports the geometry build time and the average draw time. |
+| `/isorender stress` | `[n 1-50]` | 30 | `n` renders of 512 px, one per frame, without saving files. At the end it reports the average time, memory change and OpenGL errors. |
 
-Ejemplos:
+Examples:
 
 ```
-/isorender prueba                       (512 px, cámara por defecto)
-/isorender prueba 2048 90 35 100 persp  (2048 px, rotación 90, elevación 35, zoom 100, perspectiva)
-/isorender prueba 1024 45 35 150 iso
-/isorender prueba-multi 6
-/isorender estres 10
+/isorender test                         (512 px, default camera)
+/isorender test 2048 90 35 100 persp    (2048 px, rotation 90, elevation 35, zoom 100, perspective)
+/isorender test 1024 45 35 150 iso
+/isorender test-multi 6
+/isorender stress 10
 ```
 
-La vista es el cuarto argumento de la cámara: `/isorender prueba 1024 persp` no es válido (se interpretaría «persp» como rotación). Los argumentos erróneos dan un mensaje en español y no se crea archivo.
+The view is the fifth argument: `/isorender test 1024 persp` is not valid ("persp" would be read as the rotation). Wrong arguments give a message in the chat (for example `Rotation is not a valid number: "persp".` or `Invalid view: "x". Use iso or persp.`) and no file is created.
 
-## 7. Dónde se guardan los PNG y cómo se llaman
+## 7. Where PNGs are saved and what they are called
 
-Carpeta por defecto: **`<directorio del juego>/isorender/`** (con un launcher como Prism, la carpeta `minecraft` de la instancia). Se crea sola si no existe. Se cambia con `carpetaSalida` (ver §9).
+Default folder: **`<game directory>/isorender/`** (with a launcher such as Prism, the instance's `minecraft` folder). It is created automatically if it does not exist. Change it with `outputFolder` (see §9).
 
-| Tipo | Nombre | Ejemplo |
+| Type | Name | Example |
 |---|---|---|
-| Estructura | `estructura_<aaaammdd-hhmmss>_<x1,y1,z1>_<x2,y2,z2>.png` | `estructura_20261114-152831_-4,4,-4_-2,4,1.png` |
-| Ítem | `item_<aaaammdd-hhmmss>_<id>_<meta>.png` (los caracteres raros del id, como `:`, pasan a `-`) | `item_20261114-120000_minecraft-diamond-sword_0.png` |
+| Structure | `structure_<yyyyMMdd-HHmmss>_<x1,y1,z1>_<x2,y2,z2>.png` | `structure_20261114-152831_-4,4,-4_-2,4,1.png` |
+| Item | `item_<yyyyMMdd-HHmmss>_<id>_<meta>.png` (any character of the id other than letters, digits, `_` and `-`, such as `:`, becomes `-`) | `item_20261114-120000_minecraft-diamond_sword_0.png` |
 
-- Las coordenadas son la esquina mínima y la máxima de la región (con el corte Y aplicado, si lo hay); los negativos llevan «-».
-- Nunca se sobrescribe: si el nombre ya existe (dos renders en el mismo segundo) se añade `_2`, `_3`...
-- El PNG es RGBA de 32 bits, cuadrado, con alfa 0 fuera de la silueta y alfa parcial en cristal, agua y bordes suavizados.
-- Si el archivo no se puede escribir, no queda un PNG a medias.
+- The coordinates are the minimum and the maximum corner of the region (with the Y cut applied, if any); negative numbers carry a "-".
+- Files are never overwritten: if the name already exists (two renders in the same second) `_2`, `_3`... is appended.
+- The PNG is 32-bit RGBA, square, with alpha 0 outside the silhouette and partial alpha on glass, water and smoothed edges.
+- If the file cannot be written, no half-written PNG is left behind.
 
-Al terminar, el chat muestra, por ejemplo: `[IsoRender] Render listo 1024x1024 px (1530 bloques) en /ruta/isorender/estructura_...png [2340 ms]`. La ruta aparece una sola vez, subrayada y clicable (abre la imagen con tu programa por defecto).
+When it finishes, the chat shows, for example: `[IsoRender] Render saved (1024x1024 px, 1530 blocks): /path/isorender/structure_...png [2340 ms]`. The path appears once, underlined and clickable (opens the image with your default program). For items: `Item render saved (512x512 px): <path> [N ms]`.
 
-## 8. Qué se dibuja y qué no
+## 8. What is drawn and what is not
 
-| Se dibuja | No se dibuja |
+| Drawn | Not drawn |
 |---|---|
-| Todos los bloques de la región, con su estado real (orientación, puertas, vallas conectadas, escaleras, losas, mitades). | Mobs y animales. |
-| Bloques translúcidos (cristal, cristal tintado, hielo, agua) mezclados correctamente, y tinte por bioma (hierba, hojas, agua). | Jugadores (incluido tú). |
-| Entidades de bloque: cofres, camas, carteles, cabezas, estandartes y similares. | Ítems en el suelo, correas y otras entidades. |
-| Marcos de objetos (con su ítem y rotación), pinturas y armor stands (con armadura y objetos en las manos). | Bloques fuera de la región: no aparecen aunque estén pegados al borde. |
-| | Baliza, bloque de estructura, spawner y pistón en movimiento (entidades de bloque con tratamiento especial). |
+| All blocks in the region, with their real state (orientation, doors, connected fences, stairs, slabs, halves). | Mobs and animals. |
+| Translucent blocks (glass, stained glass, ice, water) blended correctly, and biome tint (grass, leaves, water). | Players (including you). |
+| Block entities: chests, beds, signs, heads, banners and similar. | Items on the ground, leads and other entities. |
+| Item frames (with their item and rotation), paintings and armor stands (with armor and held items). | Blocks outside the region: they do not appear even if they touch the edge. |
+| | The special rendering of beacons, structure blocks, mob spawners and moving pistons (block entities with special handling). |
 
-Detalles que conviene saber:
+Things worth knowing:
 
-- **Iluminación fija:** el render usa luz plena. El PNG sale igual de día que de noche o en una cueva. La oclusión ambiental suave (sombreado en las esquinas) está siempre activa, y las hojas se dibujan siempre con la calidad de gráficos detallada (Fancy) aunque tu juego esté en gráficos rápidos.
-- Las caras del borde de la región se dibujan; las caras entre bloques contiguos no.
-- Las conexiones de vallas y paneles hacia fuera de la región se cortan (el vecino exterior cuenta como aire).
-- Un armor stand o un marco cuenta si su bloque de anclaje (marco, pintura) o su bloque base (armor stand) está dentro de la región.
-- Si una entidad falla al dibujarse, se omite y el chat avisa («Aviso: N entidades de bloque no se pudieron dibujar y se omitieron»). Tras un render con entidades, el chat también cuenta cuántas se dibujaron («3 entidades decorativas dibujadas»).
-- Los bloques de otros mods son de mejor esfuerzo: pueden faltar o verse mal (§11).
+- **Fixed lighting:** the render uses full brightness. The PNG looks the same by day, at night or in a cave. Soft ambient occlusion (shading in the corners) is always on, and leaves are always drawn with the Fancy graphics quality even if your game is set to Fast graphics.
+- Faces on the edge of the region are drawn; faces between adjacent blocks are not.
+- Fence and pane connections toward the outside of the region are cut (the outside neighbor counts as air).
+- An armor stand counts if the block at its position (its feet) is inside the region; an item frame or a painting counts if its anchor block is inside.
+- If an entity fails to draw, it is skipped and the chat warns (`Warning: N block entities could not be drawn and were skipped`). After a render with entities, the chat also tells how many were drawn (for example `3 decorative entities drawn` or `2 block entities drawn`).
+- Blocks from other mods are best-effort: they may be missing or look wrong (§11).
 
-## 9. Configuración: `isorender.properties`
+## 9. Configuration: `isorender.properties`
 
-Se crea sola la primera vez que arrancas el juego, en:
+It is created automatically the first time you start the game, in:
 
-**`<directorio del juego>/liteconfig/common/isorender.properties`**
+**`<game directory>/liteconfig/common/isorender.properties`**
 
-Es un archivo de texto (formato `.properties`, UTF-8). Edítalo con el juego **cerrado**: el mod lo lee al arrancar y lo reescribe completo al cerrar el menú si cambiaste algo, así que los cambios hechos con el juego abierto se pierden. Los nombres de las claves distinguen mayúsculas y minúsculas.
+(The game log, `logs/latest.log`, has a line `Configuration at <path>` with the exact location.) It is a text file (`.properties` format, UTF-8). Edit it with the game **closed**: the mod reads it at startup and rewrites it completely when you close the menu if something changed, so changes made while the game is open are lost. Key names are case-sensitive.
 
-| Clave | Valores | Por defecto | Ejemplo | Qué hace |
+| Key | Values | Default | Example | What it does |
 |---|---|---|---|---|
-| `carpetaSalida` | ruta de carpeta | vacío | `carpetaSalida=renders` | Vacío = `<juego>/isorender`. Una ruta relativa se interpreta desde el directorio del juego; una absoluta se usa tal cual. |
-| `resolucion` | entero 512 a 4096 | 512 | `resolucion=2048` | Lado de la imagen en píxeles. |
-| `rotacion` | 0 a 359 | 45.0 | `rotacion=90.0` | Rotación de la cámara en grados. |
-| `elevacion` | 5 a 90 | 35.264 | `elevacion=30.0` | Elevación en grados. |
-| `zoom` | 25 a 400 | 100.0 | `zoom=150.0` | Zoom en %. |
-| `desplazamientoX` | -100 a 100 | 0.0 | `desplazamientoX=10.0` | Desplazamiento horizontal en %. |
-| `desplazamientoY` | -100 a 100 | 0.0 | `desplazamientoY=-5.0` | Desplazamiento vertical en %. |
-| `vista` | `iso` o `persp` | `iso` | `vista=persp` | Isométrica o perspectiva. |
-| `fondo` | `TABLERO`, `BLANCO`, `GRIS`, `NEGRO`, `VERDE` | `TABLERO` | `fondo=VERDE` | Fondo de la vista previa (no afecta al PNG). |
-| `tamanoMaximo` | entero 1 a 64 | 64 | `tamanoMaximo=32` | Tamaño máximo de la región por eje. No se puede subir de 64. |
+| `outputFolder` | folder path | empty | `outputFolder=renders` | Empty = `<game>/isorender`. A relative path is taken from the game directory; an absolute one is used as is. |
+| `resolution` | integer 512 to 4096 | 512 | `resolution=2048` | Side of the image in pixels. |
+| `rotation` | 0 to 359 | 45.0 | `rotation=90.0` | Camera rotation in degrees. |
+| `elevation` | 5 to 90 | 35.264 | `elevation=30.0` | Elevation in degrees. |
+| `zoom` | 25 to 400 | 100.0 | `zoom=150.0` | Zoom in %. |
+| `offsetX` | -100 to 100 | 0.0 | `offsetX=10.0` | Horizontal offset in %. |
+| `offsetY` | -100 to 100 | 0.0 | `offsetY=-5.0` | Vertical offset in %. |
+| `view` | `iso` or `persp` | `iso` | `view=persp` | Isometric or perspective. |
+| `background` | `CHECKERBOARD`, `WHITE`, `GRAY`, `BLACK`, `GREEN` | `CHECKERBOARD` | `background=GREEN` | Preview background (does not affect the PNG). |
+| `maxSize` | integer 1 to 64 | 64 | `maxSize=32` | Maximum region size per axis. It cannot be raised above 64. |
 
-Ejemplo de archivo:
+Example file (the order of the keys in a file written by the mod may differ):
 
 ```
-carpetaSalida=
-resolucion=1024
-rotacion=45.0
-elevacion=35.264
+outputFolder=
+resolution=1024
+rotation=45.0
+elevation=35.264
 zoom=100.0
-desplazamientoX=0.0
-desplazamientoY=0.0
-vista=iso
-fondo=TABLERO
-tamanoMaximo=64
+offsetX=0.0
+offsetY=0.0
+view=iso
+background=CHECKERBOARD
+maxSize=64
 ```
 
-Reglas:
+Rules:
 
-- Los decimales admiten punto o coma al leer; el mod siempre escribe con punto.
-- Una clave ausente o con el valor en blanco usa el valor por defecto, sin aviso.
-- **Valor inválido** (texto donde va un número, fuera de rango, `vista` que no sea `iso`/`persp`, `fondo` desconocido): solo esa clave vuelve a su valor por defecto y el resto se conserva. El motivo queda en el registro del juego (`logs/latest.log`, líneas «Configuración: «clave=valor» no es válido…»), no en el chat. Ojo: `resolucion=1024.0` no vale (debe ser un entero).
-- **Archivo corrupto** (UTF-8 inválido, secuencia `\u` mal formada): se usan todos los valores por defecto y se anota en el registro.
-- Archivo ausente: se crea con los valores por defecto. Si no se puede crear o guardar (por ejemplo, sin permisos), el juego continúa y el motivo queda en el registro.
-- Las claves desconocidas se ignoran y desaparecen la próxima vez que el mod guarde.
-- `carpetaSalida` y `tamanoMaximo` solo se cambian a mano; el menú guarda el resto (cámara, vista, resolución, fondo).
+- Decimals accept a point or a comma when reading; the mod always writes with a point.
+- A missing key, or one with a blank value, uses the default, with no warning.
+- **Invalid value** (text where a number goes, out of range, a `view` that is not `iso`/`persp`, an unknown `background`): only that key goes back to its default and the rest is kept. The reason is written to the game log (`logs/latest.log`, lines such as `Configuration: "zoom=500" is not valid (...); using the default value.`), not to the chat. Note that `resolution=1024.0` is not valid (it must be an integer).
+- **Corrupt file** (invalid UTF-8, malformed `\u` sequence): all default values are used and a line is written to the log.
+- Missing file: it is created with the default values. If it cannot be created or saved (for example, no permission), the game continues and the reason goes to the log.
+- Unknown keys are ignored and disappear the next time the mod saves.
+- `outputFolder` and `maxSize` are only changed by hand; the menu saves the rest (camera, view, resolution, background).
+- The format is `java.util.Properties`: on Windows write paths with forward slashes (`C:/Renders`) or doubled backslashes (`C\:\\Renders`).
 
-## 10. Mensajes frecuentes y qué hacer
+## 10. Common messages and what to do
 
-Todos llevan el prefijo `[IsoRender]`.
+All carry the `[IsoRender]` prefix.
 
-| Mensaje | Causa | Qué hacer |
+| Message | Cause | What to do |
 |---|---|---|
-| `No hay selección: fija los puntos con /isorender pos1 y /isorender pos2.` | No has fijado ningún punto. | Fija los dos puntos. |
-| `Falta el punto 1: fíjalo con /isorender pos1.` (o punto 2) | Selección incompleta. En el menú, Renderizar está en gris. | Fija el punto que falta. |
-| `La región de 70 × 10 × 10 supera el máximo permitido de 64 × 64 × 64 bloques.` | Algún eje supera el máximo. | Reduce la región o renderiza por partes. |
-| `La región tiene zonas no cargadas; acércate para que los chunks se carguen.` | Parte de la región está fuera de la distancia de renderizado. | Acércate (o aumenta la distancia de renderizado) hasta que se cargue y repite. |
-| `La región solo contiene aire: no hay bloques que renderizar.` | No hay ningún bloque. Un armor stand o un marco **sin ningún bloque** en la región también da este mensaje. | Incluye al menos un bloque en la región. |
-| `Ya hay un render en curso o pendiente; espera a que termine.` | Pediste otro render antes de que acabe el anterior. | Espera unos segundos. |
-| `Memoria insuficiente: se necesitan unos X MB y solo hay Y MB libres. Usa una región más pequeña o menos resolución.` | Poca memoria libre de Java antes de empezar. | Baja la resolución o la región; si es posible, dale más RAM a Java (parámetro `-Xmx` en tu launcher). |
-| `Memoria insuficiente para renderizar...; usa una región más pequeña o menos resolución.` | Java se quedó sin memoria durante el render. | Igual que arriba. El juego no se cierra. |
-| `Aviso: poca memoria para el supermuestreo a N px; se dibuja sin suavizado de bordes.` | Aviso, no error: el PNG se genera sin suavizado. | Más RAM o menos resolución si quieres bordes suaves. |
-| `Aviso: tu GPU no admite supermuestreo a N px; los bordes saldrán sin suavizar.` | Tu GPU no admite el doble de resolución interna (p. ej. 4096 px exige textura de 8192). | Usa 2048 px o menos para bordes suaves. |
-| `Tu tarjeta gráfica no soporta N px (máximo M px). Elige una resolución menor.` | La GPU no admite esa resolución. | Baja la resolución. |
-| `Error de OpenGL (0x…) al crear el framebuffer…; posible falta de memoria de vídeo.` | Sin VRAM suficiente. | Baja la resolución. |
-| `No se pudo guardar el archivo (…). Comprueba permisos y espacio en disco.` | Carpeta sin permisos, disco lleno o ruta imposible de crear. | Cambia `carpetaSalida` a una carpeta con permisos y comprueba el espacio. No queda archivo parcial. |
-| `Error inesperado al … (TipoDeError). Detalles en la consola del juego.` | Fallo no previsto. | El juego sigue funcionando. Mira `logs/latest.log` y avisa a quien mantiene el mod. |
-| `Uso: /isorender pos1 \| pos2 \| clear \| menu \| render \| prueba … \| item [id] [meta]` | Comando mal escrito o con argumentos de más. | Revisa §6. |
-| `Aviso: OpenGL informó un error (…) durante el render; ya se limpió.` | OpenGL registró un error que el mod limpió. | Si se repite o ves fallos visuales, mira el registro. |
+| `No selection: set the points with /isorender pos1 and /isorender pos2.` | You have not set any point. | Set both points. |
+| `Point 1 is missing: set it with /isorender pos1.` (or point 2) | Incomplete selection. In the menu, Render is greyed out. | Set the missing point. |
+| `The 70 × 10 × 10 region exceeds the maximum allowed size of 64 × 64 × 64 blocks.` | Some axis exceeds the maximum. | Reduce the region or render it in parts. |
+| `Part of the region is not loaded; move closer so the chunks load.` | Part of the region is outside the render distance. | Move closer (or raise the render distance) until it loads, then repeat. |
+| `The region contains only air: there are no blocks to render.` | There is no block at all. An armor stand or item frame with **no block** in the region gives this message too. | Include at least one block in the region. |
+| `The region contains only air.` | The region has blocks, but none of them produced anything to draw. | Include blocks with a visible model. |
+| `A render is already running or pending; wait for it to finish.` | You asked for another render before the previous one ended. | Wait a few seconds. |
+| `Not enough memory: about X MB are needed and only Y MB are free. Use a smaller region or a lower resolution.` | Little free Java memory before starting. | Lower the resolution or the region; if possible give Java more RAM (`-Xmx` parameter in your launcher). |
+| `Not enough memory while exporting the render; use a smaller region or a lower resolution.` | Java ran out of memory during the render. | Same as above. The game does not close. |
+| `Warning: low memory for supersampling at N px; drawing without edge smoothing.` | Warning, not an error: the PNG is generated without smoothing. | More RAM or a lower resolution if you want smooth edges. |
+| `Warning: your GPU does not support supersampling at N px; edges will not be smoothed.` | Your GPU does not support double the internal resolution (e.g. 4096 px needs an 8192 texture). | Use 2048 px or less for smooth edges. |
+| `Warning: not enough memory for supersampling (...). Retrying without edge smoothing.` | The internal image could not be created; the mod retries without supersampling. | Same as above. |
+| `Your graphics card does not support N px (maximum M px). Choose a lower resolution.` | The GPU does not support that resolution. | Lower the resolution. |
+| `OpenGL error (0x…) while creating the N px framebuffer; possibly out of video memory.` (also `Incomplete framebuffer (0x…) at N px; possibly out of video memory.`) | Not enough VRAM. | Lower the resolution. |
+| `Could not save the file (...). Check permissions and disk space.` | Folder without permission, full disk or a path that cannot be created. | Change `outputFolder` to a folder you can write to and check the disk space. No partial file is left. |
+| `Unexpected error while exporting the render (ErrorType). Details are in the game console.` | An unforeseen failure. | The game keeps working. Look at `logs/latest.log` and report it to the maintainer. |
+| `Usage: /isorender pos1 \| pos2 \| clear \| menu \| render \| test ...` (the full line is in §6) | Mistyped command or extra arguments. | Check §6. |
+| `Warning: OpenGL reported an error (GL_...) during the render; it has been cleared.` | OpenGL logged an error that the mod cleared. | If it repeats or you see visual glitches, look at the log. |
+| `N blocks could not be drawn and were skipped` | Some blocks (usually from other mods) failed to draw. | Nothing; the rest of the image is fine. |
+| `Error drawing the selection outline; disabled until the game restarts: ...` | The outline failed to draw. | Restart the game; renders are not affected. |
 
-## 11. Limitaciones conocidas
+## 11. Known limitations
 
-- **Solo cliente y solo lo cargado:** se capturan únicamente los chunks que tu cliente tiene cargados.
-- **Regiones de hasta 64 × 64 × 64.** Más grande queda fuera de la versión 1.
-- **Solo bloques vanilla garantizados.** Los de otros mods son de mejor esfuerzo; si un bloque falla se omite y se avisa («N bloques no se pudieron dibujar y se omitieron»).
-- **Entidades:** solo marcos de objetos, pinturas y armor stands, más las entidades de bloque. No hay mobs, jugadores, ítems en el suelo ni correas.
-- **Una región con únicamente un armor stand o un marco y ningún bloque se rechaza** como «solo contiene aire», porque la validación mira bloques, no entidades.
-- **Imagen siempre cuadrada y fondo siempre transparente;** no hay fondo opaco, recorte a la silueta, animaciones ni GIF.
-- **Sin autocompletado** de `/isorender` con Tab, y el comando va en minúsculas (`/ISORENDER` lo trata el servidor como comando desconocido).
-- **Luz fija:** no refleja la hora del día ni la luz del mundo. Las conexiones de vallas y paneles con bloques fuera de la región se cortan.
-- **Supermuestreo:** el suavizado de bordes usa un render interno del doble de lado; a 4096 px requiere una textura de 8192 px y unos 0,5 GB de VRAM. Si no cabe, se avisa y se dibuja sin suavizar.
-- **Memoria de vídeo:** solo se comprueba antes del render con GPU NVIDIA (extensión NVX_gpu_memory_info). En otras GPU no se limita por VRAM y un fallo se detecta al crear el framebuffer.
-- **Vista previa simplificada** en regiones de más de 32.768 bloques de volumen (sin entidades, menos calidad).
-- **El corte Y no se guarda** y solo admite Y máxima (no hay Y mínima).
-- **Una sola operación a la vez:** los renders, las pruebas y el estrés comparten un cerrojo; el segundo se rechaza con aviso.
-- **Mientras se renderiza el juego se detiene un momento:** el render se hace en el hilo de dibujo (una región de 32³ a 2048 px debería tardar unos segundos).
-- **Compatibilidad:** probado en cliente vanilla 1.12.2 con LiteLoader limpio. No se garantiza con otros mods ni con Forge.
+- **Client only, and only what is loaded:** only the chunks your client has loaded are captured.
+- **Regions up to 64 × 64 × 64.** Larger is outside version 1.
+- **Only vanilla blocks are guaranteed.** Blocks from other mods are best-effort; if a block fails it is skipped and reported (`N blocks could not be drawn and were skipped`).
+- **Entities:** only item frames, paintings and armor stands, plus block entities. No mobs, players, items on the ground or leads.
+- **A region containing only an armor stand or an item frame and no block is rejected** as "only air", because the validation looks at blocks, not entities.
+- **The image is always square and the background always transparent;** there is no opaque background, no cropping to the silhouette, no animations or GIFs.
+- **No Tab completion** for `/isorender`, and the command is case-sensitive (the server treats `/ISORENDER` as an unknown command).
+- **Fixed light:** it does not reflect the time of day or the world's light. Fence and pane connections to blocks outside the region are cut.
+- **Supersampling:** edge smoothing uses an internal render at twice the side; at 4096 px it needs an 8192 px texture and about 0.5 GB of VRAM. If it does not fit, you are warned and it is drawn without smoothing.
+- **Video memory:** it is only checked before the render on NVIDIA GPUs (NVX_gpu_memory_info extension). On other GPUs VRAM is not limited in advance and a failure is detected when the framebuffer is created.
+- **Simplified preview** for regions of more than 32,768 blocks of volume (no entities, lower quality).
+- **The Y cut is not saved** and only supports a maximum Y (there is no minimum Y); a cut outside the region is silently ignored.
+- **An empty resolution field means 512.**
+- **The configuration file is rewritten in full** when the menu closes, and editing it while the game is open has no effect.
+- **The debug commands write to `isorender-test/`** and ignore `outputFolder`.
+- **One operation at a time:** renders, tests and stress runs share a lock; a second one is rejected with a warning.
+- **The game pauses for a moment while rendering:** the render runs on the drawing thread (a 32³ region at 2048 px should take a few seconds).
+- **Compatibility:** tested on a vanilla 1.12.2 client with a clean LiteLoader. It is not guaranteed with other mods or with Forge.
 
-## 12. Solución de problemas
+## 12. Troubleshooting
 
-| Síntoma | Qué probar |
+| Symptom | What to try |
 |---|---|
-| El mod no aparece / no sale el saludo | Comprueba que usas el perfil con LiteLoader 1.12.2 (no el vanilla), que el `.litemod` está en `mods/` y que la versión de Minecraft es 1.12.2. Mira `logs/latest.log` por «IsoRender». |
-| `/isorender ...` se envía como mensaje o da «comando desconocido» | Escríbelo en minúsculas y con la barra inicial. Si no hay saludo, el mod no está cargado. |
-| La tecla K no abre el menú | Puede estar ocupada por otra función: busca «Abrir menú IsoRender» (categoría IsoRender) en Opciones > Controles y reasígnala. No abre el menú si ya hay otra pantalla abierta (inventario, chat). Alternativa: `/isorender menu`. |
-| Renderizar está en gris | La selección no está completa; el estado aparece arriba del menú. |
-| La vista previa dice «zonas no cargadas» o «solo aire» | Ver §10. |
-| La imagen sale con el fondo negro o blanco | Tu visor de imágenes no muestra la transparencia; abre el PNG en un editor o sobre otro fondo. El PNG tiene alfa 0 fuera de la silueta. |
-| Faltan bloques o entidades | Mira el chat: avisa de lo omitido. Los bloques de mods son de mejor esfuerzo. La vista previa simplificada no dibuja entidades, pero el PNG sí. |
-| No encuentro el PNG | La ruta sale en el chat (clicable). Por defecto: `<directorio del juego>/isorender/`. Los comandos de prueba escriben en `isorender-test/`. |
-| El menú no recuerda mis ajustes | Se guardan al cerrar el menú. Si `isorender.properties` no se puede escribir, el juego sigue y el motivo queda en `logs/latest.log`. |
-| La configuración se ignora | Mira `logs/latest.log` (líneas «Configuración:»). Cada valor inválido se sustituye por el por defecto; edita con el juego cerrado. |
-| Pantalla negra o rara tras un render | No debería ocurrir: el mod restaura el estado gráfico. Si pasa, anota los pasos, `logs/latest.log` y avisa. |
-| El juego va lento al renderizar 4096 px | Es normal un instante de pausa; usa 2048 o menos si tu equipo es modesto. |
+| The mod does not appear / no greeting | Check that you use the LiteLoader 1.12.2 profile (not plain vanilla), that the `.litemod` is in `mods/` and that the Minecraft version is 1.12.2. Look in `logs/latest.log` for "IsoRender". |
+| `/isorender ...` is sent as a message or gives "unknown command" | Type it in lowercase and with the leading slash. If there is no greeting, the mod is not loaded. |
+| The K key does not open the menu | It may be taken by another function: look for "Open IsoRender menu" (category IsoRender) in Options > Controls and rebind it. It does not open the menu if another screen is open (inventory, chat). Alternative: `/isorender menu`. |
+| Render is greyed out | The selection is not complete; the status is shown at the top of the menu. |
+| The preview says "not loaded" or "only air" | See §10. |
+| The image has a black or white background | Your image viewer does not show transparency; open the PNG in an editor or over another background. The PNG has alpha 0 outside the silhouette. |
+| Blocks or entities are missing | Look at the chat: it warns about what was skipped. Mod blocks are best-effort. The simplified preview does not draw entities, but the PNG does. |
+| I cannot find the PNG | The path is in the chat (clickable). By default: `<game directory>/isorender/`. The debug commands write to `isorender-test/`. |
+| The menu does not remember my settings | They are saved when the menu closes. If `isorender.properties` cannot be written, the game continues and the reason is in `logs/latest.log`. |
+| The configuration is ignored | Look in `logs/latest.log` (lines starting with "Configuration:"). Each invalid value is replaced by its default; edit with the game closed. |
+| Black or odd screen after a render | It should not happen: the mod restores the graphics state. If it does, note the steps and `logs/latest.log` and report it. |
+| The game is slow when rendering 4096 px | A short pause is normal; use 2048 or less if your machine is modest. |

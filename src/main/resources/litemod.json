@@ -1,7 +1,7 @@
 {
   "name": "IsoRender",
   "displayName": "IsoRender",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "mcversion": "1.12.2",
   "author": "judamar",
   "description": "Isometric structure renders. MIT license.",

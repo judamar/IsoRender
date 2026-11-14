@@ -1,337 +1,337 @@
-# Documentación técnica de IsoRender (T-039, RNF-006)
+# IsoRender technical documentation (T-039, RNF-006)
 
-Para quien mantiene o amplía el mod. Complementa a `docs/ERS.md` (qué), `docs/PLAN.md` (cómo y cuándo), `docs/ENTORNO.md` (toolchain y compilación), `docs/LITELOADER-API.md` (API de LiteLoader verificada), `docs/LICENCIAS.md` y `docs/CASOS-PRUEBA.md`. Los usuarios finales deben leer `docs/MANUAL.md`.
+For people who maintain or extend the mod. It complements `docs/ERS.md` (what), `docs/PLAN.md` (how and when), `docs/ENTORNO.md` (toolchain and build), `docs/LITELOADER-API.md` (verified LiteLoader API), `docs/LICENCIAS.md` and `docs/CASOS-PRUEBA.md`. End users should read `docs/MANUAL.md`. The internal project documents (ERS, PLAN, ENTORNO, LITELOADER-API, LICENCIAS, CASOS-PRUEBA) and the code comments are in Spanish; everything the mod shows to the player is in English.
 
-Todo lo de este documento está contrastado con el código de `src/main/java/com/judamar/isorender/` (versión 0.1.0).
+Everything in this document has been checked against the code in `src/main/java/com/judamar/isorender/` (version 1.0.0). Class and method names are Spanish identifiers; the command names, configuration keys and file names the user sees are English. Mapping for the command enum: `Subcomando.PRUEBA` = `test`, `PRUEBA_MULTI` = `test-multi`, `ESTRES` = `stress`.
 
-## 1. Visión general
+## 1. Overview
 
-Mod de cliente para Minecraft 1.12.2 cargado con LiteLoader (sin Forge), Java 8, mappings MCP `snapshot_20170624`, OpenGL de función fija con LWJGL 2. Dada una región (dos puntos) genera un PNG RGBA cuadrado con fondo transparente. El motor dibuja la región en un framebuffer propio (FBO), lo lee por franjas y lo reduce con supermuestreo. Una vista previa en el menú reutiliza el mismo motor con otro FBO.
+A client-side mod for Minecraft 1.12.2 loaded with LiteLoader (no Forge), Java 8, MCP mappings `snapshot_20170624`, fixed-function OpenGL with LWJGL 2. Given a region (two points) it produces a square RGBA PNG with a transparent background. The engine draws the region into its own framebuffer object (FBO), reads it back in strips and downsamples it with supersampling. A preview in the menu reuses the same engine with another FBO.
 
-Reglas que condicionan todo el diseño (de `CLAUDE.md`): el mundo es de solo lectura; un fallo de selección, render o menú no cierra el juego (se informa en el chat y se restaura el estado gráfico); textos al usuario en español; lógica pura separada de la que toca Minecraft para poder probarla con JUnit.
+Rules that shape the whole design (from `CLAUDE.md`): the world is read-only; a selection, render or menu failure does not close the game (it is reported in the chat and the graphics state is restored); user-facing text is in English; pure logic is kept apart from the logic that touches Minecraft so that it can be tested with JUnit.
 
-## 2. Arquitectura por paquetes
+## 2. Architecture by package
 
-Raíz: `com.judamar.isorender`.
+Root: `com.judamar.isorender`.
 
-| Paquete | Responsabilidad | Clases clave |
+| Package | Responsibility | Key classes |
 |---|---|---|
-| (raíz) | Punto de entrada y orquestación | `LiteModIsoRender` |
-| `seleccion` | Estado de la selección, análisis de comandos y validación de la región | `Seleccion`, `Subcomando`, `ValidacionRegion` (pura), `ValidacionMundo` (usa `World`) |
-| `configuracion` | Valores de configuración, lectura/escritura y acceso global | `Configuracion` (pura), `ArchivoConfiguracion` (E/S), `Ajustes` |
-| `menu` | Pantalla del menú y estado de cámara que edita | `PantallaMenu`, `Deslizador`, `EstadoCamara`, `Parametro`, `PresetCamara`, `TextoSeleccion` |
-| `render` | Motor de render, vista previa, PNG, mensajes y robustez | ver §2.1 |
+| (root) | Entry point and orchestration | `LiteModIsoRender` |
+| `seleccion` | Selection state, command parsing and region validation | `Seleccion`, `Subcomando`, `ValidacionRegion` (pure), `ValidacionMundo` (uses `World`) |
+| `configuracion` | Configuration values, read/write and global access | `Configuracion` (pure), `ArchivoConfiguracion` (I/O), `Ajustes` |
+| `menu` | Menu screen and the camera state it edits | `PantallaMenu`, `Deslizador`, `EstadoCamara`, `Parametro`, `PresetCamara`, `TextoSeleccion` |
+| `render` | Render engine, preview, PNG, messages and robustness | see §2.1 |
 
-### 2.1 Clases del paquete `render`
+### 2.1 Classes of the `render` package
 
-| Grupo | Clases | Papel |
+| Group | Classes | Role |
 |---|---|---|
-| Cámara | `ParametrosCamara` (pura), `CamaraGL` | Rangos, encuadre automático y distancia de perspectiva; aplicación de la proyección y el modelview |
-| Geometría | `GeometriaCacheada`, `VistaRegion`, `GeometriaRegion` (pura), `OrdenTranslucido` (pura), `ResumenGeometria` (pura) | Lectura del mundo una sola vez, display lists por capa, orden de translúcidas |
-| Entidades | `EntidadesBloque`, `EntidadesDecorativas`, `ResumenEntidades` (pura) | Entidades de bloque y marcos/pinturas/armor stands |
-| Salida de imagen | `FramebufferRender`, `ConversorImagen` (pura), `ResolucionSalida` (pura), `NombreArchivo` (pura) | FBO, lectura por franjas, reducción a ARGB y PNG, nombres únicos |
-| Orquestación | `RenderPrueba`, `Estres`, `ResumenEstres` (pura), `ArgumentoItem` (pura) | Flujo de un render completo, render de ítem, pruebas de estrés |
-| Vista previa | `VistaPrevia`, `VistaPreviaCalculo` (pura), `FondoVista` | FBO propio, estados, modo simplificado |
-| Robustez | `EstadoGrafico`, `Guardia` (pura), `Fallos` (pura salvo `informar`), `EstimacionMemoria` (pura), `Chat` | Captura/restauración de estado GL, exclusión mutua, errores, memoria, salida al chat |
-| Mundo | `ContornoSeleccion` | Caja de la selección en el mundo |
+| Camera | `ParametrosCamara` (pure), `CamaraGL` | Ranges, automatic framing and perspective distance; applying the projection and modelview |
+| Geometry | `GeometriaCacheada`, `VistaRegion`, `GeometriaRegion` (pure), `OrdenTranslucido` (pure), `ResumenGeometria` (pure) | Reading the world once, per-layer display lists, translucent ordering |
+| Entities | `EntidadesBloque`, `EntidadesDecorativas`, `ResumenEntidades` (pure) | Block entities and item frames / paintings / armor stands |
+| Image output | `FramebufferRender`, `ConversorImagen` (pure), `ResolucionSalida` (pure), `NombreArchivo` (pure) | FBO, strip readback, reduction to ARGB and PNG, unique names |
+| Orchestration | `RenderPrueba`, `Estres`, `ResumenEstres` (pure), `ArgumentoItem` (pure) | Flow of a full render, item render, stress tests |
+| Preview | `VistaPrevia`, `VistaPreviaCalculo` (pure), `FondoVista` | Own FBO, states, simplified mode |
+| Robustness | `EstadoGrafico`, `Guardia` (pure), `Fallos` (pure except `informar`), `EstimacionMemoria` (pure), `Chat` | GL state capture/restore, mutual exclusion, errors, memory, chat output |
+| World | `ContornoSeleccion` | Selection box in the world |
 
-«Pura» = sin clases de Minecraft ni OpenGL; son las que cubren las pruebas unitarias (§9).
+"Pure" = no Minecraft or OpenGL classes; these are the ones covered by the unit tests (§9).
 
-### 2.2 Dependencias entre paquetes
+### 2.2 Dependencies between packages
 
-`LiteModIsoRender` conoce a todos. `configuracion.Configuracion` depende de tipos de `render` (`ParametrosCamara`, `FondoVista`, `ResolucionSalida`) y de `seleccion.ValidacionRegion` (la constante `MAX`). `render.VistaPrevia` usa `menu.TextoSeleccion`, `seleccion.*` y `configuracion.Ajustes`. Hay dependencias en ambos sentidos (`configuracion` → `render` y `render` → `configuracion`), así que los paquetes no son capas estrictas: tenlo en cuenta al mover clases.
+`LiteModIsoRender` knows all of them. `configuracion.Configuracion` depends on `render` types (`ParametrosCamara`, `FondoVista`, `ResolucionSalida`) and on `seleccion.ValidacionRegion` (the `MAX` constant). `render.VistaPrevia` uses `menu.TextoSeleccion`, `seleccion.*` and `configuracion.Ajustes`. There are dependencies in both directions (`configuracion` → `render` and `render` → `configuracion`), so the packages are not strict layers: keep that in mind when moving classes.
 
-## 3. Ciclo de vida
+## 3. Lifecycle
 
-Todo corre en el hilo de cliente de Minecraft (que es el de render). Los `volatile` de `LiteModIsoRender` son defensivos.
+Everything runs on Minecraft's client thread (which is also the render thread). The `volatile` fields of `LiteModIsoRender` are defensive.
 
 ```
- arranque
-   LiteLoader instancia LiteModIsoRender (clase LiteMod*, descubierta por nombre)
-   init(configPath): registra la KeyBinding «Abrir menú IsoRender» (K, categoría IsoRender),
-                      carga liteconfig/common/isorender.properties, siembra EstadoCamara y Ajustes
+ startup
+   LiteLoader instantiates LiteModIsoRender (a LiteMod* class, discovered by name)
+   init(configPath): registers the KeyBinding "Open IsoRender menu" (K, category IsoRender),
+                      loads liteconfig/common/isorender.properties, seeds EstadoCamara and Ajustes
 
- cada fotograma
-   onTick (Tickable)            saludo al entrar a un mundo; lee la tecla K; abre PantallaMenu
-        │                       si (tecla o abrirMenu) y no hay otra pantalla
-   [chat] OutboundChatFilter    onSendChatMessage: Subcomando.parsear; marca flags/slots y devuelve false
-        │                       (cancela el envío al servidor); pos1/pos2/clear/uso se atienden aquí mismo
-   onRender (RenderListener)    ANTES de dibujar el fotograma: ejecuta el trabajo diferido, en este orden:
+ every frame
+   onTick (Tickable)            greeting on entering a world; reads the K key; opens PantallaMenu
+        │                       if (key or abrirMenu) and no other screen is open
+   [chat] OutboundChatFilter    onSendChatMessage: Subcomando.parsear; sets flags/slots and returns false
+        │                       (cancels sending to the server); pos1/pos2/clear/usage are handled right here
+   onRender (RenderListener)    BEFORE the frame is drawn: runs the deferred work, in this order:
         │                         1. renderMenu  → renderDesdeMenu
-        │                         2. estres en curso → un paso por fotograma
-        │                         3. pendiente (prueba, prueba-multi, estres, item)
-   [mundo, GUI del juego]
-   onPostRender (PostRenderListener)  con la cámara del mundo ya puesta: ContornoSeleccion.dibujar
+        │                         2. stress in progress → one step per frame
+        │                         3. pending (test, test-multi, stress, item)
+   [world, game GUI]
+   onPostRender (PostRenderListener)  with the world camera already set: ContornoSeleccion.dibujar
 ```
 
-Por qué el trabajo se difiere a `onRender`:
+Why the work is deferred to `onRender`:
 
-- El filtro de chat se ejecuta dentro de `EntityPlayerSP.sendChatMessage`, no en el bucle de dibujo; el render offscreen necesita un contexto GL en un punto controlado del fotograma. Además `GuiChat` cierra la pantalla después de enviar, por eso `/isorender menu` activa una bandera que `onTick` atiende en el tick siguiente (así `mc.currentScreen == null`).
-- Hay un solo hueco `pendiente` y la `Guardia` de `RenderPrueba`: un segundo comando se rechaza con `Chat.OCUPADO` en lugar de pisar al primero. `/isorender render` usa su propia bandera (`renderMenu`) y comprueba el mismo conjunto de ocupación.
-- `Estres` retiene la guardia entre fotogramas y hace un render por fotograma para no congelar el juego.
+- The chat filter runs inside `EntityPlayerSP.sendChatMessage`, not in the draw loop; the offscreen render needs a GL context at a controlled point of the frame. Also `GuiChat` closes the screen after sending, so `/isorender menu` sets a flag that `onTick` handles on the next tick (so `mc.currentScreen == null`).
+- There is a single `pendiente` slot and the `Guardia` of `RenderPrueba`: a second command is rejected with `Chat.OCUPADO` ("A render is already running or pending; wait for it to finish.") instead of overwriting the first one. `/isorender render` uses its own flag (`renderMenu`) and checks the same busy set.
+- `Estres` keeps the guard between frames and does one render per frame so the game does not freeze.
 
-Comandos: LiteLoader no ofrece comandos de cliente (`ServerCommandProvider` es de servidor y no existe `ClientCommandHandler`); `OutboundChatFilter` es el mecanismo válido y por eso no hay autocompletado (ver `LITELOADER-API.md` §4). El análisis es sensible a mayúsculas: solo `/isorender` en minúsculas.
+Commands: LiteLoader offers no client commands (`ServerCommandProvider` is server-side and there is no `ClientCommandHandler`); `OutboundChatFilter` is the valid mechanism and that is why there is no Tab completion (see `LITELOADER-API.md` §4). Parsing is case-sensitive: only lowercase `/isorender`.
 
-Menú: `PantallaMenu` es una `GuiScreen` normal abierta con `displayGuiScreen`; no pausa el juego. `EstadoCamara` vive en el mod (no en la pantalla) para conservar cámara, fondo, resolución y corte Y al cerrar y reabrir. `onGuiClosed` llama a `guardarConfiguracion` (que compara con `ultimoGuardado` y no escribe si no hay cambios).
+Menu: `PantallaMenu` is a normal `GuiScreen` opened with `displayGuiScreen`; it does not pause the game. `EstadoCamara` lives in the mod (not in the screen) so that camera, background, resolution and Y cut survive closing and reopening. `onGuiClosed` calls `guardarConfiguracion` (which compares with `ultimoGuardado` and does not write if nothing changed).
 
-## 4. Flujo de render de un PNG
+## 4. Render flow of a PNG
 
 ```
- [Renderizar]  /  /isorender render
+ [Render]  /  /isorender render
         │
         ▼
  PantallaMenu.actionPerformed ─ displayGuiScreen(null) ─► onGuiClosed ─► guardarConfiguracion
         │ alRenderizar.run()  ⇒  renderMenu = true
-        ▼                                                          (siguiente fotograma)
+        ▼                                                          (next frame)
  LiteModIsoRender.onRender ─► renderDesdeMenu
-        │   ValidacionMundo.validar(puntos, ≤ tamanoMaximo, chunks cargados, no solo aire)
-        │   RenderPrueba.exportar(regionConCorte(región, corteY), resolución, cámara)
+        │   ValidacionMundo.validar(points, ≤ maxSize, chunks loaded, not only air)
+        │   RenderPrueba.exportar(regionConCorte(region, cutY), resolution, camera)
         ▼
- RenderPrueba.render ── GUARDIA.entrar() (si ocupada: aviso y fin)
+ RenderPrueba.render ── GUARDIA.entrar() (if busy: warning and end)
         │
-        ├─(a) CONSTRUCCIÓN  construirControlado
-        │        EstimacionMemoria.comprobarGeometria (un System.gc() y reintento antes de rechazar)
+        ├─(a) BUILD  construirControlado
+        │        EstimacionMemoria.comprobarGeometria (one System.gc() and retry before rejecting)
         │        GeometriaCacheada.construir
-        │          · EstadoGrafico.capturarAjustes + forzar AO suave y hojas «fancy»
-        │          · VistaRegion (aire fuera de la caja, luz máxima) → renderBlock por bloque
-        │            a 4 BufferBuilder (SOLID, CUTOUT_MIPPED, CUTOUT, TRANSLUCENT)
-        │          · translúcidas: se copian las caras crudas (getRawBuffer)
-        │          · EntidadesBloque.recoger + EntidadesDecorativas.recoger (solo lectura)
-        │          · 3 capas opacas → 3 display lists (la translúcida se compila al dibujar)
+        │          · EstadoGrafico.capturarAjustes + force smooth AO and "fancy" leaves
+        │          · VistaRegion (air outside the box, max light) → renderBlock per block
+        │            into 4 BufferBuilders (SOLID, CUTOUT_MIPPED, CUTOUT, TRANSLUCENT)
+        │          · translucent: the raw faces are copied (getRawBuffer)
+        │          · EntidadesBloque.recoger + EntidadesDecorativas.recoger (read-only)
+        │          · 3 opaque layers → 3 display lists (the translucent one is compiled when drawing)
         │
-        ├─(b) DIBUJO  aImagen(res, escena)
-        │        factor = factorSupermuestreo(res, GPU) → factorSeguro (heap y VRAM NVIDIA)
-        │        EstadoGrafico.capturarCompleto  ← estado REAL previo (glGet*)
-        │        FramebufferRender(res·factor); enlazarYLimpiar (alfa 0, reenlaza tras el clear)
+        ├─(b) DRAW  aImagen(res, scene)
+        │        factor = factorSupermuestreo(res, GPU) → factorSeguro (heap and NVIDIA VRAM)
+        │        EstadoGrafico.capturarCompleto  ← REAL previous state (glGet*)
+        │        FramebufferRender(res·factor); enlazarYLimpiar (alpha 0, re-binds after the clear)
         │        dibujarEscena
-        │          CamaraGL.aplicar (ortográfica o frustum + encuadre automático)
-        │          pasada 1  opacas: blend (SRC_ALPHA,0 ; 1,0)  → color premultiplicado
-        │          pasada 1b entidades de bloque, luego decorativas (con su estado aislado)
-        │          pasada 2  translúcidas: ordenadas atrás→delante, blend premultiplicado, depthMask(false)
-        │        leerFranja × N (franjas de 128·factor filas) → ConversorImagen.reducirFranja
-        │        finally: fbo.close()  ·  previo.restaurar()  ·  glGetError → aviso si hubo
+        │          CamaraGL.aplicar (orthographic or frustum + automatic framing)
+        │          pass 1  opaque: blend (SRC_ALPHA,0 ; 1,0)  → premultiplied color
+        │          pass 1b block entities, then decorative ones (each with its own isolated state)
+        │          pass 2  translucent: sorted back→front, premultiplied blend, depthMask(false)
+        │        leerFranja × N (strips of 128·factor rows) → ConversorImagen.reducirFranja
+        │        finally: fbo.close()  ·  previo.restaurar()  ·  glGetError → warning if any
         │
-        ├─ avisos de bloques/entidades omitidos
-        ├─ NombreArchivo.base + unico  →  ConversorImagen.guardarPng (crea carpeta; borra PNG parcial si falla)
-        └─ Chat.archivo (ruta clicable)
-        finally: geo.close() (borra las display lists) · GUARDIA.salir()
-        (cualquier Throwable ⇒ Fallos.informar: traza a consola, mensaje corto al chat)
+        ├─ warnings about skipped blocks/entities
+        ├─ NombreArchivo.base + unico  →  ConversorImagen.guardarPng (creates the folder; deletes a partial PNG on failure)
+        └─ Chat.archivo (clickable path)
+        finally: geo.close() (deletes the display lists) · GUARDIA.salir()
+        (any Throwable ⇒ Fallos.informar: stack trace to the console, short message to the chat)
 ```
 
-La vista previa sigue el mismo camino a partir de `dibujarEscena`, con su propio FBO y sin pasar por `ConversorImagen` (§5.9).
+The preview follows the same path from `dibujarEscena` on, with its own FBO and without going through `ConversorImagen` (§5.9).
 
-## 5. Puntos de render
+## 5. Render points
 
-Cada punto está comentado en el código; aquí el porqué.
+Each point is commented in the code; here is the why.
 
 ### 5.1 `FramebufferRender`
-FBO cuadrado de `lado` px con profundidad, sobre `net.minecraft.client.shader.Framebuffer`. El constructor valida el límite de la GPU (`min(GL_MAX_TEXTURE_SIZE, GL_MAX_RENDERBUFFER_SIZE)`), limpia errores GL ajenos, crea el FBO, comprueba `glGetError` y `glCheckFramebufferStatus`, y si algo falla hace `close()` antes de relanzar (no quedan recursos a medias). Lanza `IllegalStateException` con mensaje en español. `vramLibre()` usa `NVX_gpu_memory_info` (solo NVIDIA; -1 = desconocida). La lectura es `glReadPixels` por franjas para no reservar de golpe `lado*lado*4` bytes. `close()` borra el FBO y reenlaza `mc.getFramebuffer()`.
+A square FBO of `lado` px with depth, on top of `net.minecraft.client.shader.Framebuffer`. The constructor validates the GPU limit (`min(GL_MAX_TEXTURE_SIZE, GL_MAX_RENDERBUFFER_SIZE)`), clears foreign GL errors, creates the FBO, checks `glGetError` and `glCheckFramebufferStatus`, and if anything fails it calls `close()` before rethrowing (no half-built resources). It throws `IllegalStateException` with an English message (`Your graphics card does not support N px (maximum M px). Choose a lower resolution.`, `OpenGL error (0x…) while creating the N px framebuffer; possibly out of video memory.`, `Incomplete framebuffer (0x…) at N px; possibly out of video memory.`). `vramLibre()` uses `NVX_gpu_memory_info` (NVIDIA only; -1 = unknown). Readback is `glReadPixels` in strips so that `lado*lado*4` bytes are never reserved at once. `close()` deletes the FBO and re-binds `mc.getFramebuffer()`.
 
-`enlazarYLimpiar()` reenlaza el FBO después de `framebufferClear()` (ver §7, lección 2) y antes fija `colorMask`, `depthMask` y desactiva el scissor, porque `glClear` los respeta.
+`enlazarYLimpiar()` re-binds the FBO after `framebufferClear()` (see §7, lesson 2) and first sets `colorMask` and `depthMask` and disables the scissor, because `glClear` honors them.
 
-### 5.2 `CamaraGL` y `ParametrosCamara` (cámara y encuadre)
-`CamaraGL.aplicar` carga proyección e `modelview`. Modelview común: `rotate(elevación, X) · rotate(rotación, Y) · translate(-centro de la región)`.
+### 5.2 `CamaraGL` and `ParametrosCamara` (camera and framing)
+`CamaraGL.aplicar` loads the projection and the modelview. Common modelview: `rotate(elevation, X) · rotate(rotation, Y) · translate(-region center)`.
 
-- **Ortográfica (isométrica):** `semiAncho = semiAnchoBase · 100 / zoom`, con
-  `semiAnchoBase = max sobre las 8 esquinas de max(|xp|, |yp|) / (1 − MARGEN)`, donde `xp`, `yp` son las coordenadas de pantalla de cada esquina tras rotación e inclinación y `MARGEN = 0,05`. La ventana es `ortho(cx−r, cx+r, cy−r, cy+r, −256, 256)` con `cx = −despX·r`, `cy = −despY·r` (el desplazamiento mueve la estructura, así que la ventana se mueve en sentido contrario). Plano ±256 fijo: la diagonal máxima de 64³ (≈111) cabe.
-- **Perspectiva:** FOV vertical fijo `FOV_GRADOS = 30` (`t = tan(15°)`). La cámara se aleja `d` del centro, con
-  `d = max( max sobre esquinas de [ c + max(|xp|,|yp|) / (t·(1−MARGEN)) ] , 0,5·diagonal + 1 )`,
-  donde `c = y·sen(e) + zp·cos(e)` es la cercanía de la esquina a la cámara. La primera cota hace que las 8 esquinas quepan con margen; la segunda deja la cámara fuera de la esfera que envuelve la región (ninguna esquina queda detrás). Planos: `near = 0,9·(d − cMax)`, `far = 1,1·(d − cMin) + 1`. El zoom y el desplazamiento no mueven la cámara: escalan y desplazan la ventana del frustum en el plano near (`h = near·t·100/zoom`; `glFrustum(cx−h, cx+h, cy−h, cy+h, near, far)`, `cx = −despX·h`), y `translate(0,0,−d)`.
+- **Orthographic (isometric):** `halfWidth = baseHalfWidth · 100 / zoom`, with
+  `baseHalfWidth = max over the 8 corners of max(|xp|, |yp|) / (1 − MARGEN)`, where `xp`, `yp` are each corner's screen coordinates after rotation and tilt and `MARGEN = 0.05`. The window is `ortho(cx−r, cx+r, cy−r, cy+r, −256, 256)` with `cx = −offX·r`, `cy = −offY·r` (the offset moves the structure, so the window moves the other way). Fixed ±256 planes: the maximum diagonal of 64³ (≈111) fits.
+- **Perspective:** fixed vertical FOV `FOV_GRADOS = 30` (`t = tan(15°)`). The camera moves back `d` from the center, with
+  `d = max( max over corners of [ c + max(|xp|,|yp|) / (t·(1−MARGEN)) ] , 0.5·diagonal + 1 )`,
+  where `c = y·sin(e) + zp·cos(e)` is how close the corner is to the camera. The first bound makes the 8 corners fit with a margin; the second keeps the camera outside the sphere that encloses the region (no corner ends up behind it). Planes: `near = 0.9·(d − cMax)`, `far = 1.1·(d − cMin) + 1`. Zoom and offset do not move the camera: they scale and shift the frustum window on the near plane (`h = near·t·100/zoom`; `glFrustum(cx−h, cx+h, cy−h, cy+h, near, far)`, `cx = −offX·h`), and `translate(0,0,−d)`.
 
-`ParametrosCamara` es inmutable; `crear` valida (lanza con mensaje y rango) y `limitado` recorta (controles del menú). Rangos: rotación 0–359, elevación 5–90, zoom 25–400, desplazamiento ±1 (±100 %).
+`ParametrosCamara` is immutable; `crear` validates (throws with a message that includes the range) and `limitado` clamps (menu controls). Ranges: rotation 0–359, elevation 5–90, zoom 25–400, offset ±1 (±100%).
 
 ### 5.3 `GeometriaCacheada`, `GeometriaRegion`, `VistaRegion`
-La región se lee **una vez**: `BlockRendererDispatcher.renderBlock(estado, pos, vista, bufferDeCapa)` por cada bloque (con `getAllInBoxMutable`, un solo `BlockPos` reutilizado). `renderBlock` llama a `getActualState`, así que orientación, conexiones y mitades salen correctas. Cada bloque va en try/catch: un bloque de mod que falla se cuenta (`fallidos`) y se omite (RN-010). Las capas desconocidas (de mods) se omiten.
+The region is read **once**: `BlockRendererDispatcher.renderBlock(state, pos, view, layerBuffer)` for each block (with `getAllInBoxMutable`, a single reused `BlockPos`). `renderBlock` calls `getActualState`, so orientation, connections and halves come out right. Each block is in a try/catch: a mod block that fails is counted (`fallidos`) and skipped (RN-010). Unknown layers (from mods) are skipped.
 
-`VistaRegion` implementa `IBlockAccess` sobre el mundo: dentro de la caja delega, fuera devuelve aire (así se dibujan las caras del borde y funcionan el culling interior y la oclusión ambiental), `getCombinedLight` devuelve siempre luz máxima (mismo PNG de día y de noche) y `getBiome` delega (tinte real). `getTileEntity` fuera de la caja devuelve null. [SUPUESTO] las conexiones de vallas y paneles hacia fuera de la región quedan cortadas.
+`VistaRegion` implements `IBlockAccess` over the world: inside the box it delegates, outside it returns air (so edge faces are drawn and interior culling and ambient occlusion work), `getCombinedLight` always returns maximum light (same PNG by day and by night) and `getBiome` delegates (real tint). `getTileEntity` outside the box returns null. [SUPUESTO] fence and pane connections toward the outside of the region are cut.
 
-Mientras construye, `EstadoGrafico.forzarAjustesGeometria()` fija `ambientOcclusion = 2` y las hojas en modo «fancy» (capa determinista); `restaurar()` devuelve los ajustes del jugador siempre.
+While building, `EstadoGrafico.forzarAjustesGeometria()` sets `ambientOcclusion = 2` and leaves to "fancy" (deterministic layer); `restaurar()` always gives the player's settings back.
 
-**Display lists por capa** (SOLID, CUTOUT_MIPPED, CUTOUT, TRANSLUCENT): cada lista reproduce `WorldVertexBufferUploader.draw(buffer)`. Se eligieron frente a VBO porque es el camino de vanilla 1.12 sin VBO (`ListedRenderChunk`): conservan sin código extra los punteros de vértice, color, UV y lightmap de `DefaultVertexFormats.BLOCK`, el driver copia los datos a su memoria y no hay buffers ni estado de cliente GL que enlazar o limpiar. Si una medición futura lo exige, el cambio es local a esta clase. `close()` borra las listas y es idempotente; `construir` las borra si falla a medias.
+**Per-layer display lists** (SOLID, CUTOUT_MIPPED, CUTOUT, TRANSLUCENT): each list replays `WorldVertexBufferUploader.draw(buffer)`. They were chosen over VBOs because it is the vanilla 1.12 non-VBO path (`ListedRenderChunk`): they keep the vertex, color, UV and lightmap pointers of `DefaultVertexFormats.BLOCK` with no extra code, the driver copies the data into its own memory, and there are no buffers or client GL state to bind or clean up. If a future measurement demands it, the change is local to this class. `close()` deletes the lists and is idempotent; `construir` deletes them if it fails halfway.
 
-`GeometriaRegion` aloja la lógica pura: orden de capas, `contiene`, `volumen`, `bytesIniciales` (acotado a 64 MB por capa), `recortar` (corte Y) y `parsearN`.
+`GeometriaRegion` holds the pure logic: layer order, `contiene`, `volumen`, `bytesIniciales` (capped at 64 MB per layer), `recortar` (Y cut) and `parsearN`.
 
 ### 5.4 `OrdenTranslucido`
-Las caras translúcidas se guardan crudas y se recompilan ordenadas de atrás hacia delante solo cuando cambian rotación, elevación o modo (isométrica/perspectiva); zoom y desplazamiento no alteran el orden. En ortográfica la profundidad exacta es la coordenada z del espacio de vista (`y·sen(e) + (−x·sen(r) + z·cos(r))·cos(e)`), no la distancia a un punto como hace `sortVertexData` de vanilla (que solo acierta con cámara en perspectiva). En perspectiva se ordena por distancia al ojo, calculado en coordenadas de mundo. Se ordena por el centroide de la cara (vale para caras de bloque) con TimSort (estable en empates).
+Translucent faces are stored raw and recompiled sorted back to front only when rotation, elevation or mode (isometric/perspective) change; zoom and offset do not alter the order. In orthographic mode the exact depth is the view-space z coordinate (`y·sin(e) + (−x·sin(r) + z·cos(r))·cos(e)`), not the distance to a point as vanilla's `sortVertexData` does (which is only right with a perspective camera). In perspective the order is by distance to the eye, computed in world coordinates. Faces are sorted by their centroid (fine for block faces) with TimSort (stable on ties).
 
 ### 5.5 `EntidadesBloque`
-En 1.12 cofres, camas, carteles y cabezas no tienen modelo estático (o solo parcial): vanilla usa `TileEntitySpecialRenderer`. `recoger` recorre el mapa de entidades de los chunks **ya cargados** (`getLoadedChunk`, que no carga ni crea nada; `World.getTileEntity` podría crear la entidad que falte) y excluye renderers globales (baliza, bloque de estructura), spawner (su renderer crea una entidad cacheada) y pistón en movimiento. `dibujar` no usa display list (los renderers usan estado GL y animación): se llama a `TileEntityRendererDispatcher.render` (versión de 7 argumentos, sin comprobar distancia al jugador) con la cámara activa. Detalles:
+In 1.12 chests, beds, signs and heads have no static model (or only a partial one): vanilla uses a `TileEntitySpecialRenderer`. `recoger` walks the tile-entity map of the **already loaded** chunks (`getLoadedChunk`, which neither loads nor creates anything; `World.getTileEntity` could create a missing entity) and excludes global renderers (beacon, structure block), mob spawners (their renderer creates a cached entity) and moving pistons. `dibujar` does not use a display list (the renderers use GL state and animation): it calls `TileEntityRendererDispatcher.render` (the 7-argument version, with no distance-to-player check) with the active camera. Details:
 
-- `cameraHitResult = null` para que ningún renderer dibuje el rótulo del nombre; `partialTicks = 0`.
-- Se traslada al origen de la región y se pasan coordenadas relativas (con coordenadas de mundo grandes el `float` perdería precisión).
-- Cada entidad va en try/catch; tras cada una `restaurarEstado` iguala la profundidad de la pila de matrices, apaga la luz de objeto y devuelve el estado que espera la pasada de sólidos. Los campos públicos del dispatcher se guardan y restauran.
-- Iluminación: antes de cada entidad se activa la luz de objeto de vanilla y `luzObjeto()` fuerza por GL directo `GL_COLOR_MATERIAL`, color blanco y luz ambiente 0,4. Solo con `GlStateManager`, cofres y camas salían muy oscuros (la caché no reflejaba el estado real y quedaba el material por defecto de OpenGL); confirmado en el juego.
-- Se dibujan tras los sólidos y antes de las translúcidas.
+- `cameraHitResult = null` so that no renderer draws the name label; `partialTicks = 0`.
+- It translates to the region origin and passes relative coordinates (with large world coordinates the `float` would lose precision).
+- Each entity is in a try/catch; after each one `restaurarEstado` equalizes the matrix stack depth, turns off item lighting and returns the state that the solid pass expects. The dispatcher's public fields are saved and restored.
+- Lighting: before each entity vanilla's item lighting is enabled and `luzObjeto()` forces, through direct GL, `GL_COLOR_MATERIAL`, white color and ambient light 0.4. With `GlStateManager` alone, chests and beds came out far too dark (its cache did not reflect the real state and OpenGL's default material remained); confirmed in game.
+- They are drawn after the solids and before the translucents.
 
 ### 5.6 `EntidadesDecorativas`
-Solo marcos de objetos, pinturas y armor stands (RN-001/RF-034), comprobados con `instanceof` explícitos para que una entidad de mod que herede de `EntityHanging` no entre. `recoger` usa `getEntitiesWithinAABB` (solo lectura) y filtra por el bloque de anclaje (`getHangingPosition`) o el bloque base (armor stand). Se dibujan con `RenderManager.doRenderEntity` (partialTicks 0, sin hitbox), con `pointedEntity = null` y sombras apagadas (se restauran). El resto del aislamiento es el de `EntidadesBloque`.
+Only item frames, paintings and armor stands (RN-001/RF-034), checked with explicit `instanceof` so that a mod entity inheriting from `EntityHanging` does not get in. `recoger` uses `getEntitiesWithinAABB` (read-only) and filters by the anchor block (`getHangingPosition`) or the block at the armor stand's position. They are drawn with `RenderManager.doRenderEntity` (partialTicks 0, no hitbox), with `pointedEntity = null` and shadows off (restored afterwards). The rest of the isolation is the same as `EntidadesBloque`.
 
-Limitación: una región solo con un armor stand y sin bloques no llega aquí, porque `ValidacionMundo` busca bloques que no sean aire y la rechaza antes. El `ResumenGeometria.vacio()` sí cuenta las decorativas.
+Limitation: a region with only an armor stand and no blocks never gets here, because `ValidacionMundo` looks for non-air blocks and rejects it first (`The region contains only air: there are no blocks to render.`). `ResumenGeometria.vacio()` does count the decorative entities.
 
-### 5.7 Supermuestreo, `ConversorImagen` y alfa premultiplicado
-`aImagen` elige `factor = 2` si `res·2 ≤ máximo de la GPU`, si no 1 (con aviso). `factorSeguro` baja el factor si el heap o la VRAM (si se conoce) no alcanzan, con un `System.gc()` y nueva medición antes de degradar; si ni con factor 1 cabe, lanza con mensaje. Si la construcción del FBO o la memoria fallan con factor 2, se repite a 1 y se avisa. La escena es un `Runnable` que puede ejecutarse dos veces: no debe tener efectos fuera de OpenGL.
+### 5.7 Supersampling, `ConversorImagen` and premultiplied alpha
+`aImagen` chooses `factor = 2` if `res·2 ≤ GPU maximum`, otherwise 1 (with a warning). `factorSeguro` lowers the factor if the heap or the VRAM (if known) is not enough, with a `System.gc()` and a new measurement before degrading; if even factor 1 does not fit, it throws with a message. If building the FBO or memory fails at factor 2, it is repeated at 1 and a warning is shown. The scene is a `Runnable` that can run twice: it must not have effects outside OpenGL.
 
-El FBO guarda color **premultiplicado** (`rgb·a`, `a`):
+The FBO stores **premultiplied** color (`rgb·a`, `a`):
 
-- Opacas: `blend (SRC_ALPHA, ZERO ; ONE, ZERO)` (el color queda multiplicado por su alfa, el alfa se copia).
-- Translúcidas: `blend (SRC_ALPHA, ONE_MINUS_SRC_ALPHA ; ONE, ONE_MINUS_SRC_ALPHA)`: el alfa acumulado es `src + dst·(1−src)`, correcto incluso sobre fondo transparente (RF-011).
+- Opaque: `blend (SRC_ALPHA, ZERO ; ONE, ZERO)` (the color ends up multiplied by its alpha, alpha is copied).
+- Translucent: `blend (SRC_ALPHA, ONE_MINUS_SRC_ALPHA ; ONE, ONE_MINUS_SRC_ALPHA)`: accumulated alpha is `src + dst·(1−src)`, correct even over a transparent background (RF-011).
 
-`reducirFranja` suma por bloque `factor×factor` el alfa y el rgb premultiplicado, y des-premultiplica: `canal = Σ(c·a) / Σa`, alfa = media. Así el color del borde es el de la estructura, nunca mezclado con el rgb del fondo transparente (sin halos), y alfa 0 produce exactamente `0x00000000`. La imagen sale con el eje Y invertido respecto a GL. Las franjas son de `128·factor` filas (múltiplo del factor).
+`reducirFranja` sums, per `factor×factor` block, the alpha and the premultiplied rgb, and un-premultiplies: `channel = Σ(c·a) / Σa`, alpha = mean. This way the edge color is the structure's, never mixed with the rgb of the transparent background (no halos), and alpha 0 produces exactly `0x00000000`. The image comes out with the Y axis flipped relative to GL. Strips are `128·factor` rows (a multiple of the factor).
 
-### 5.8 `RenderPrueba` (orquestación)
-Es el nexo: guardia, construcción controlada, dibujo, nombres de archivo y mensajes. Funciones: `exportar` (PNG real en `carpetaSalida`), `ejecutar` y `ejecutarMulti` (pruebas, en `isorender-test`), `exportarItem` / `escenaItem` (ítem como en el inventario: proyección con Y invertida y `scale(1,−1,1)` replicando `RenderItem`, luz de GUI, ignora la cámara del menú), `renderSilencioso` (estrés) y `dibujarEscena` (compartida con la vista previa). El nombre de la clase es histórico (prototipo de T-011).
+### 5.8 `RenderPrueba` (orchestration)
+It is the hub: guard, controlled build, drawing, file names and messages. Functions: `exportar` (real PNG in the output folder), `ejecutar` and `ejecutarMulti` (the `test` and `test-multi` commands, writing to `isorender-test`), `exportarItem` / `escenaItem` (item as in the inventory: projection with inverted Y and `scale(1,−1,1)` replicating `RenderItem`, GUI lighting, ignores the menu camera), `renderSilencioso` (stress) and `dibujarEscena` (shared with the preview). The class name is historical (prototype of T-011).
 
-### 5.9 `VistaPrevia` y `VistaPreviaCalculo`
-Máquina de estados `SIN_REGION → PREPARANDO → LISTA` (y `ERROR`):
+### 5.9 `VistaPrevia` and `VistaPreviaCalculo`
+State machine `SIN_REGION → PREPARANDO → LISTA` (and `ERROR`):
 
-- Valida al abrir, cada 20 fotogramas y cuando cambia la región completa (tamaño máximo, chunks, solo aire).
-- La construcción de la geometría se difiere un fotograma para poder pintar «Preparando vista previa…». Usa `RenderPrueba.construirControlado` (misma comprobación de memoria).
-- El FBO propio se repinta solo si cambia la cámara, el tamaño o queda un reordenado de translúcidas pendiente. Se muestra como un quad con `blendFunc(ONE, ONE_MINUS_SRC_ALPHA)` (premultiplicado) sobre un fondo (tablero de ajedrez dibujado en un solo lote, o color liso). V invertida porque el FBO tiene el origen abajo.
-- **Modo simplificado:** volumen > 32.768 bloques (tras el corte Y). Lado del FBO limitado a 256 px (512 en normal; mínimo 64; se calcula como recuadro × escala de GUI), no dibuja entidades de bloque ni decorativas, y reordena las translúcidas como mucho cada 300 ms.
-- En error no reintenta cada fotograma: solo si cambian región o cámara. Los fallos quedan en el recuadro; el menú no se cierra.
-- `PantallaMenu` crea la `VistaPrevia` en el constructor (no en `initGui`, que se repite al redimensionar) y la cierra en `onGuiClosed`.
+- It validates on opening, every 20 frames and whenever the complete region changes (maximum size, chunks, only air).
+- Building the geometry is deferred by one frame so that "Preparing preview…" can be painted. It uses `RenderPrueba.construirControlado` (same memory check).
+- The own FBO is repainted only if the camera, the size or a pending re-sort of translucents changes. It is shown as a quad with `blendFunc(ONE, ONE_MINUS_SRC_ALPHA)` (premultiplied) over a background (checkerboard drawn in a single batch, or a flat color). V is flipped because the FBO has its origin at the bottom.
+- **Simplified mode:** volume > 32,768 blocks (after the Y cut). FBO side limited to 256 px (512 in normal mode; minimum 64; computed as box × GUI scale), it draws neither block nor decorative entities, and re-sorts translucents at most every 300 ms.
+- On error it does not retry every frame: only if the region or the camera change. Failures are shown in the box; the menu does not close.
+- `PantallaMenu` creates the `VistaPrevia` in the constructor (not in `initGui`, which repeats on resize) and closes it in `onGuiClosed`.
 
 ### 5.10 `EstadoGrafico`
-Único punto que captura y restaura el estado gráfico que toca el mod, al estado **previo real** (leído con `glGet*`/`glIsEnabled`), no a un valor «vanilla» supuesto. Tres alcances:
+The single point that captures and restores the graphics state the mod touches, back to the **real previous** state (read with `glGet*`/`glIsEnabled`), not to an assumed "vanilla" value. Three scopes:
 
-| Alcance | Qué guarda | Uso |
+| Scope | What it saves | Use |
 |---|---|---|
-| `capturarCompleto` | banderas, funciones, texturas por unidad, framebuffer, viewport, scissor, matrices (y profundidad de pilas), alineación de lectura, AO y hojas, `glGetError` | Render offscreen y repintado de la vista previa |
-| `capturarLigero` | solo banderas y unidades de textura | Dibujo dentro del mundo o la GUI (contorno, quad de la vista previa) |
-| `capturarAjustes` | solo AO y hojas del jugador | Construcción de geometría |
+| `capturarCompleto` | flags, functions, textures per unit, framebuffer, viewport, scissor, matrices (and stack depths), read alignment, AO and leaves, `glGetError` | Offscreen render and preview repaint |
+| `capturarLigero` | only flags and texture units | Drawing inside the world or the GUI (outline, preview quad) |
+| `capturarAjustes` | only the player's AO and leaves | Geometry building |
 
-`restaurar()` nunca lanza; en el alcance completo devuelve el primer error GL pendiente (y vacía la cola) para que el llamador avise. Restaura mediante `GlStateManager` para mantener coherente su caché; lo que `GlStateManager` no cachea (framebuffer, viewport, matrices, scissor, ancho de línea, alineación) va directo a GL. Iguala la profundidad de las pilas de matrices (un renderer que falló a medias puede dejar `push` sin `pop`), y escribe el color también directo con `glColor4f` porque tras dibujar con arrays de vértices el color actual de GL es indefinido.
+`restaurar()` never throws; in the full scope it returns the first pending GL error (and drains the queue) so the caller can warn. It restores through `GlStateManager` to keep its cache consistent; whatever `GlStateManager` does not cache (framebuffer, viewport, matrices, scissor, line width, alignment) goes straight to GL. It equalizes the matrix stack depths (a renderer that failed halfway can leave a `push` without a `pop`), and writes the color directly with `glColor4f` too, because after drawing with vertex arrays GL's current color is undefined.
 
 ### 5.11 `Guardia`, `Fallos`, `EstimacionMemoria`, `Chat`
-- `Guardia`: `AtomicBoolean` con `entrar/salir`; un solo render o estrés a la vez.
-- `Fallos.mensaje`: traduce `OutOfMemoryError`, `IOException`, `IllegalArgumentException`/`IllegalStateException` con texto en español y cualquier otra cosa a «Error inesperado…». `informar` imprime la traza en consola y manda el mensaje corto al chat; nunca lanza.
-- `EstimacionMemoria`: cotas conservadoras (no mediciones) con margen del 25 %: geometría `≈ (3·ini + max(64 KB, ini/8))·2` con `ini = min(volumen·64, 64 MB)`; dibujo `12·res² + lado·128·factor·4`; VRAM `lado²·8`. El heap libre es `máximo − usado`.
-- `Chat`: único punto de salida al chat, con el prefijo `[IsoRender] `. `archivo` añade la ruta una sola vez, subrayada y con `ClickEvent OPEN_FILE`. Nunca lanza.
+- `Guardia`: an `AtomicBoolean` with `entrar/salir`; only one render or stress run at a time.
+- `Fallos.mensaje`: translates `OutOfMemoryError` (`Not enough memory while <context>; use a smaller region or a lower resolution.`), `IOException` (`Could not save the file (<detail>). Check permissions and disk space.`), `IllegalArgumentException`/`IllegalStateException` (their own English message, shortened to 160 characters) and anything else into `Unexpected error while <context> (<ErrorType>). Details are in the game console.` `informar` prints the stack trace to the console and sends the short message to the chat; it never throws.
+- `EstimacionMemoria`: conservative bounds (not measurements) with a 25% margin: geometry `≈ (3·ini + max(64 KB, ini/8))·2` with `ini = min(volume·64, 64 MB)`; drawing `12·res² + side·128·factor·4`; VRAM `side²·8`. Free heap is `max − used`. Message: `Not enough memory: about X MB are needed and only Y MB are free. Use a smaller region or a lower resolution.`
+- `Chat`: the single chat output point, with the `[IsoRender] ` prefix. `archivo` appends the path once, underlined and with `ClickEvent OPEN_FILE`. It never throws.
 
 ### 5.12 `ContornoSeleccion`
-Dibuja las 12 aristas de la caja de selección en `onPostRender`, con cámara del mundo ya puesta, compensando la posición interpolada del observador. Dos pasadas: una tenue sin test de profundidad (visible tras el terreno) y otra nítida con profundidad. Margen de 0,002 para evitar z-fighting. Usa `capturarLigero`. Si lanza, se desactiva hasta reiniciar y avisa una vez.
+Draws the 12 edges of the selection box in `onPostRender`, with the world camera already set, compensating for the viewer's interpolated position. Two passes: a faint one without depth test (visible behind terrain) and a sharp one with depth. A 0.002 margin avoids z-fighting. It uses `capturarLigero`. If it throws, it disables itself until restart and warns once.
 
-## 6. Decisiones de diseño
+## 6. Design decisions
 
-| Decisión | Motivo |
+| Decision | Reason |
 |---|---|
-| No usar `glPushAttrib/glPopAttrib` | Desincronizan la caché de `GlStateManager` (dejaron el mundo en negro, T-014). Se captura el estado real y se restaura por `GlStateManager` (`EstadoGrafico`). |
-| Reenlazar el FBO tras `framebufferClear()` | En 1.12.2 termina con `unbindFramebuffer()`; sin reenlazar se dibujaba y leía en el framebuffer principal (T-018). |
-| Display lists en vez de VBO | Ver §5.3: reutilizan exactamente el camino de vanilla y no dejan estado GL pendiente. |
-| Geometría construida una vez, dibujo repetible | La vista previa y el render comparten `GeometriaCacheada`; mover la cámara no relee el mundo. Es la base de RNF-003. |
-| Encuadre automático por las 8 esquinas | Garantiza que cualquier rotación/elevación cabe con margen del 5 % (CA-010.1). En perspectiva se añade la cota de la esfera para no dejar esquinas tras la cámara. |
-| Luz plena y AO forzado | El PNG es reproducible (no depende de la hora ni del lightmap) y se parece al aspecto del juego. Se apaga el lightmap con `entityRenderer.disableLightmap()`. |
-| Alfa premultiplicado de extremo a extremo | Evita halos de color en los bordes (RNF-004) y da alfa acumulado correcto en translúcidas. |
-| Supermuestreo 2× en lugar de MSAA | El antialiasing de bordes funciona sin MSAA y con alfa; coste: 4× píxeles y VRAM. |
-| Solo lectura del mundo | RNF-013: `getBlockState`, `getLoadedChunk`, `getEntitiesWithinAABB`; nunca `setBlockState`, `getTileEntity` (podría crear) ni movimiento de entidades. Los ítems de la mano se copian (`stack.copy()`). |
-| Comandos por `OutboundChatFilter` | Único mecanismo válido en LiteLoader; trae como coste la ausencia de Tab. |
-| `GuiSlider` propio (`Deslizador`) | `GuiSlider` es de Forge, que no se usa. |
-| Configuración en `.properties` con UTF-8 estricto | Sin dependencias; un archivo con bytes inválidos se detecta (decoder estricto) en vez de leerse mal. |
-| Un render a la vez (`Guardia`) | Evita solapar FBO, display lists y estado GL. |
-| `Subcomando` en `seleccion` | Análisis puro de la línea de comandos, probado sin Minecraft; también reconoce los comandos de prueba. |
+| Do not use `glPushAttrib/glPopAttrib` | They desynchronize `GlStateManager`'s cache (they left the world black, T-014). The real state is captured and restored through `GlStateManager` (`EstadoGrafico`). |
+| Re-bind the FBO after `framebufferClear()` | In 1.12.2 it ends with `unbindFramebuffer()`; without re-binding, drawing and reading happened in the main framebuffer (T-018). |
+| Display lists instead of VBOs | See §5.3: they reuse exactly vanilla's path and leave no pending GL state. |
+| Geometry built once, drawing repeatable | Preview and render share `GeometriaCacheada`; moving the camera does not re-read the world. It is the basis of RNF-003. |
+| Automatic framing by the 8 corners | Guarantees that any rotation/elevation fits with a 5% margin (CA-010.1). In perspective the sphere bound is added so no corner is left behind the camera. |
+| Full light and forced AO | The PNG is reproducible (it does not depend on time of day or the lightmap) and resembles the in-game look. The lightmap is turned off with `entityRenderer.disableLightmap()`. |
+| Premultiplied alpha end to end | Avoids color halos at the edges (RNF-004) and gives correct accumulated alpha on translucent blocks. |
+| 2× supersampling instead of MSAA | Edge antialiasing works without MSAA and with alpha; cost: 4× pixels and VRAM. |
+| Read-only world | RNF-013: `getBlockState`, `getLoadedChunk`, `getEntitiesWithinAABB`; never `setBlockState`, `getTileEntity` (could create) or entity movement. Held items are copied (`stack.copy()`). |
+| Commands through `OutboundChatFilter` | The only valid mechanism in LiteLoader; the cost is no Tab completion. |
+| Own slider (`Deslizador`) | `GuiSlider` belongs to Forge, which is not used. |
+| Configuration in `.properties` with strict UTF-8 | No dependencies; a file with invalid bytes is detected (strict decoder) instead of being misread. |
+| One render at a time (`Guardia`) | Avoids overlapping FBOs, display lists and GL state. |
+| `Subcomando` in `seleccion` | Pure parsing of the command line, tested without Minecraft; it also recognizes the debug commands. |
 
-## 7. Lecciones y trampas (gotchas)
+## 7. Lessons and gotchas
 
-1. **Estado GL desincronizado (T-014).** `glPushAttrib/glPopAttrib` crudos descuadran la caché de `GlStateManager`: la siguiente llamada de vanilla «cree» un estado que ya no es el real y el mundo se veía en negro. Regla: capturar con `glGet*` y restaurar con `GlStateManager` (`EstadoGrafico`).
-2. **FBO desenlazado por `framebufferClear()` (T-018, T-011).** El prototipo dibujó sobre el framebuffer de la ventana (render solapado, fondo opaco). Hay que reenlazar tras el clear. Además `glClear` respeta `colorMask`, `depthMask` y el scissor heredados del juego; `enlazarYLimpiar` los fija antes.
-3. **Color actual tras arrays de vértices.** Es indefinido; `EstadoGrafico` escribe `glColor4f` directo además de `GlStateManager.color`.
-4. **Texturas y lightmap.** Tras dibujar entidades hay que volver a enlazar el atlas de bloques y apagar el lightmap (unidad 1); `restaurarEstado` y los `finally` lo hacen.
-5. **Renderers a medias.** Un renderer que falla puede dejar pilas de matrices sin `pop` o el `Tessellator` en medio de un `draw`: se iguala la pila y se llama a `finishDrawing()` capturando `IllegalStateException`.
-6. **Orden de translúcidas en ortográfica.** No sirve ordenar por distancia al ojo (vanilla): hay que ordenar por profundidad del eje de vista.
-7. **Entidades de bloque:** no usar `World.getTileEntity` (puede crear); no comprobar distancia al jugador (usar la sobrecarga de 7 argumentos de `render`); pasar `cameraHitResult = null` para ocultar rótulos.
-8. **Mappings.** Los sources de LiteLoader vienen sin desofuscar (SRG): en el código se usan los nombres MCP (`mc.world`, `getKeyDescription()`).
-9. **`isPressed()` se consume siempre** en `onTick` aunque no se abra el menú, para no acumular pulsaciones.
-10. **`ParametrosCamara.crear` vs `limitado`:** comandos y configuración rechazan o avisan; el menú recorta. No mezclarlos.
-11. **Ítem en la mano:** `RenderItem.renderItem` con el atlas en `setBlurMipmap(false, false)` para pixeles nítidos; se restaura con `restoreLastBlurMipmap` en el `finally`.
+1. **Desynchronized GL state (T-014).** Raw `glPushAttrib/glPopAttrib` throw off `GlStateManager`'s cache: vanilla's next call "believes" in a state that is no longer the real one and the world turned black. Rule: capture with `glGet*` and restore with `GlStateManager` (`EstadoGrafico`).
+2. **FBO unbound by `framebufferClear()` (T-018, T-011).** The prototype drew onto the window's framebuffer (overlapping render, opaque background). You must re-bind after the clear. Also `glClear` honors the `colorMask`, `depthMask` and scissor inherited from the game; `enlazarYLimpiar` sets them first.
+3. **Current color after vertex arrays.** It is undefined; `EstadoGrafico` writes `glColor4f` directly as well as `GlStateManager.color`.
+4. **Textures and lightmap.** After drawing entities the block atlas must be re-bound and the lightmap (unit 1) turned off; `restaurarEstado` and the `finally` blocks do it.
+5. **Half-failed renderers.** A renderer that fails can leave matrix stacks without a `pop` or the `Tessellator` in the middle of a `draw`: the stack is equalized and `finishDrawing()` is called, catching `IllegalStateException`.
+6. **Translucent ordering in orthographic mode.** Sorting by distance to the eye (vanilla) does not work: you must sort by depth along the view axis.
+7. **Block entities:** do not use `World.getTileEntity` (it can create); do not check distance to the player (use the 7-argument overload of `render`); pass `cameraHitResult = null` to hide labels.
+8. **Mappings.** LiteLoader's sources are not deobfuscated (SRG): the code uses MCP names (`mc.world`, `getKeyDescription()`).
+9. **`isPressed()` is always consumed** in `onTick` even if the menu is not opened, so presses do not pile up.
+10. **`ParametrosCamara.crear` vs `limitado`:** commands and configuration reject or warn; the menu clamps. Do not mix them.
+11. **Held item:** `RenderItem.renderItem` with the atlas in `setBlurMipmap(false, false)` for sharp pixels; restored with `restoreLastBlurMipmap` in the `finally`.
 
-## 8. Configuración y persistencia
+## 8. Configuration and persistence
 
-- Archivo: `<directorio del juego>/liteconfig/common/isorender.properties` (el `configPath` que LiteLoader pasa a `init`). Formato `java.util.Properties`, UTF-8 estricto.
-- `Configuracion` (inmutable): `carpetaSalida`, `resolucion`, `camara` (`ParametrosCamara`), `fondo`, `tamanoMaximo`. `leer` valida cada clave por separado: lo inválido toma el valor de fábrica y añade un aviso; `p.load` fallido (escape `\u` malformado) devuelve todos los valores por defecto. Los desplazamientos se guardan en % (la cámara los guarda como fracción).
-- `ArchivoConfiguracion.cargar` crea el archivo si no existe; `guardar` escribe en `.tmp` y renombra (si el renombrado falla, escribe directo) y crea el directorio. Ambos nunca lanzan: los fallos van al log (`LOG::warn`).
-- `Ajustes.actual()` es la configuración vigente global (`volatile`); `Ajustes.resolverCarpeta` resuelve `carpetaSalida` contra `mc.mcDataDir` (vacío → `isorender`).
-- El menú persiste cámara, vista, resolución y fondo al cerrarse (`EstadoCamara.aConfiguracion`); conserva `carpetaSalida` y `tamanoMaximo`. El corte Y no se persiste.
-- Claves, rangos y valores por defecto: ver `docs/MANUAL.md` §9 (la lista autorizada es `Configuracion.leer/escribir`).
+- File: `<game directory>/liteconfig/common/isorender.properties` (the `configPath` LiteLoader passes to `init`). Format `java.util.Properties`, strict UTF-8.
+- `Configuracion` (immutable) holds `carpetaSalida` (key `outputFolder`), `resolucion` (`resolution`), `camara` (`ParametrosCamara`: keys `rotation`, `elevation`, `zoom`, `offsetX`, `offsetY`, `view`), `fondo` (`background`) and `tamanoMaximo` (`maxSize`). `leer` validates each key separately: an invalid value takes the factory default and adds a warning (`Configuration: "<key>=<value>" is not valid (<cause>); using the default value.`); a failed `p.load` (malformed `\u` escape) returns all defaults. Offsets are stored in % (the camera keeps them as a fraction). `view` and `background` are read case-insensitively; decimals accept a comma.
+- `ArchivoConfiguracion.cargar` creates the file if it does not exist; `guardar` writes to `.tmp` and renames (if the rename fails, it writes directly) and creates the directory. Both never throw: failures go to the log (`LOG::warn`, logger name `IsoRender`).
+- `Ajustes.actual()` is the current global configuration (`volatile`); `Ajustes.resolverCarpeta` resolves `outputFolder` against `mc.mcDataDir` (empty → `isorender`).
+- The menu persists camera, view, resolution and background when it closes (`EstadoCamara.aConfiguracion`); it keeps `outputFolder` and `maxSize`. The Y cut is not persisted.
+- Keys, ranges and defaults: see `docs/MANUAL.md` §9 (the authoritative list is `Configuracion.leer/escribir`).
+- Output names (`NombreArchivo`): `structure_<yyyyMMdd-HHmmss>_<x1,y1,z1>_<x2,y2,z2>.png` and `item_<yyyyMMdd-HHmmss>_<id>_<meta>.png`, made unique with `_2`, `_3`... (`unico`). The debug commands write `test-<size>-<ms>.png` and `multi-<stamp>-<i>of<n>-rot<deg>.png` to `<game>/isorender-test/`.
 
-## 9. Empaquetado, construcción y pruebas
+## 9. Packaging, building and tests
 
-- **Construir y probar:** ver `docs/ENTORNO.md` (versiones fijadas, `./gradlew setupDecompWorkspace`, `./gradlew build`, instalación en el cliente de pruebas y el problema conocido de `ZipException` con la caché limpia). No se duplica aquí.
-- **Pruebas unitarias:** JUnit 4.12, unas 150 pruebas en `src/test/java`, solo de lógica pura (selección, validaciones, cámara, nombres, configuración, conversión de imagen, memoria, orden de translúcidas, parámetros del menú). Una clase: `./gradlew test --tests com.judamar.isorender.seleccion.SubcomandoTest`. Lo que toca OpenGL o el juego se verifica a mano con `docs/CASOS-PRUEBA.md`.
-- **Paquete:** un solo `.litemod` (`jar { extension = 'litemod'; from('LICENSE') }`), con las clases de `com.judamar.isorender`, `litemod.json` (manual, en `src/main/resources`) y `LICENSE` (MIT). No se empaquetan dependencias ni recursos de terceros (ver `docs/LICENCIAS.md`).
-- **`validarLitemod`** (enganchada a `build`): falla si el paquete no contiene `litemod.json` y `LICENSE`, si la versión de `litemod.json` difiere de la del proyecto o si `mcversion` no es `1.12.2`.
-- **Versión:** está en `build.gradle` (`version`), `litemod.json` y como literal en `LiteModIsoRender.getVersion()`. `validarLitemod` solo compara las dos primeras: al subir de versión hay que cambiar las tres.
-- **Clase de entrada:** LiteLoader la descubre por prefijo de nombre (`LiteMod*`); el descriptor no la declara.
+- **Build and test:** see `docs/ENTORNO.md` (pinned versions, `./gradlew setupDecompWorkspace`, `./gradlew build`, installing in the test client and the known `ZipException` problem with a clean cache). It is not duplicated here.
+- **Unit tests:** JUnit 4.12, about 150 tests in `src/test/java`, only for pure logic (selection, validations, camera, names, configuration, image conversion, memory, translucent ordering, menu parameters). One class: `./gradlew test --tests com.judamar.isorender.seleccion.SubcomandoTest`. Whatever touches OpenGL or the game is checked by hand with `docs/CASOS-PRUEBA.md`.
+- **Package:** a single `.litemod` (`jar { extension = 'litemod'; from('LICENSE') }`) with the classes of `com.judamar.isorender`, `litemod.json` (manual, in `src/main/resources`) and `LICENSE` (MIT). No dependencies or third-party resources are packaged (see `docs/LICENCIAS.md`). Output: `build/libs/mod-isorender-1.0.0-mc1.12.2.litemod`.
+- **`validarLitemod`** (hooked to `build`): fails if the package lacks `litemod.json` or `LICENSE`, if the version in `litemod.json` differs from the project's, or if `mcversion` is not `1.12.2`.
+- **Version:** it lives in `build.gradle` (`version`), `litemod.json` and as a literal in `LiteModIsoRender.getVersion()`. `validarLitemod` only compares the first two: when bumping the version, change all three.
+- **Entry class:** LiteLoader discovers it by name prefix (`LiteMod*`); the descriptor does not declare it.
 
-## 10. Cómo añadir una función
+## 10. How to add a feature
 
-Sigue `CLAUDE.md`: una tarea del plan a la vez, leer el requisito y sus criterios Dado/Cuando/Entonces, lógica pura con prueba, commit con el ID de tarea, y las tareas con 👁 esperan la aprobación del solicitante tras entregar la lista exacta de qué comprobar en el juego.
+Follow `CLAUDE.md`: one plan task at a time, read the requirement and its Given/When/Then criteria, pure logic with a test, a commit with the task ID, and tasks marked with the eye icon wait for the requester's approval after delivering the exact list of what to check in the game.
 
-| Quiero… | Dónde |
+| I want... | Where |
 |---|---|
-| Un subcomando nuevo | Añadir el valor a `Subcomando` (y su caso en `parsear`, con argumentos solo si procede) y su prueba; atenderlo en el `switch` de `LiteModIsoRender.onSendChatMessage`; si dibuja, diferirlo a `onRender` (nuevo valor de `pendiente`) y respetar la `Guardia`; actualizar el mensaje «Uso: …» y `docs/MANUAL.md` §6. |
-| Un ajuste nuevo de cámara | Campo en `ParametrosCamara` (`crear`, `limitado`, `equals`, `hashCode`), valor en `Parametro`, fila en `PantallaMenu` (cuidado con la altura de filas, ver el comentario de `fila`), clave en `Configuracion.leer/escribir` y pruebas. |
-| Un tipo de entidad o bloque especial | Entidades de bloque: `EntidadesBloque.recoger`. Entidades de mundo: `EntidadesDecorativas.recoger` (con `instanceof` explícito). Mantener solo lectura, aislamiento try/catch y `restaurarEstado`. |
-| Un paso nuevo de dibujo | En `RenderPrueba.dibujarEscena`, en el sitio correcto del orden (opacas → entidades → translúcidas) y con el estado GL fijado y restaurado dentro del paso. Todo dibujo fuera de pantalla debe pasar por `EstadoGrafico`. |
-| Una clave de configuración | `Configuracion` (campo, `leer`, `escribir`, `equals`, `hashCode`), comentario de cabecera del archivo, pruebas en `ConfiguracionTest` y `docs/MANUAL.md` §9. |
-| Un mensaje al usuario | `Chat.decir`, siempre en español; los errores recuperables como `IllegalArgumentException`/`IllegalStateException` con texto en español (`Fallos.mensaje` los reenvía tal cual). |
-| Cambiar el límite de 64³ | Es una decisión de alcance (ERS RN-003, RNF-014): no cambiar en silencio. |
+| A new subcommand | Add the value to `Subcomando` (and its case in `parsear`, with arguments only if applicable) and its test; handle it in the `switch` of `LiteModIsoRender.onSendChatMessage`; if it draws, defer it to `onRender` (new value of `pendiente`) and respect the `Guardia`; update the `Usage: ...` message and `docs/MANUAL.md` §6. |
+| A new camera setting | Field in `ParametrosCamara` (`crear`, `limitado`, `equals`, `hashCode`), value in `Parametro`, row in `PantallaMenu` (mind the row height, see the comment on `fila`), key in `Configuracion.leer/escribir` and tests. |
+| A special entity or block type | Block entities: `EntidadesBloque.recoger`. World entities: `EntidadesDecorativas.recoger` (with explicit `instanceof`). Keep it read-only, with try/catch isolation and `restaurarEstado`. |
+| A new drawing step | In `RenderPrueba.dibujarEscena`, at the right place in the order (opaque → entities → translucent) and with the GL state set and restored inside the step. Any offscreen drawing must go through `EstadoGrafico`. |
+| A configuration key | `Configuracion` (field, `leer`, `escribir`, `equals`, `hashCode`), the file's header comment, tests in `ConfiguracionTest` and `docs/MANUAL.md` §9. |
+| A user message | `Chat.decir`, always in English; recoverable errors as `IllegalArgumentException`/`IllegalStateException` with an English message (`Fallos.mensaje` forwards them as they are). |
+| Change the 64³ limit | It is a scope decision (ERS RN-003, RNF-014): do not change it silently. |
 
-## 11. Supuestos vigentes
+## 11. Active assumptions
 
-Marcados `[SUPUESTO]` en el ERS o en el código. Los marcados «código» están comentados en el fuente. Sigue vigente la regla de no resolverlos en silencio.
+Marked `[SUPUESTO]` in the ERS or in the code. Those marked "code" are commented in the source. The rule of not resolving them silently still applies.
 
-| # | Supuesto | Dónde |
+| # | Assumption | Where |
 |---|---|---|
-| 1 | El mod es solo de cliente y trabaja con los chunks cargados, en un jugador o en servidor. | ERS §6.1; `ValidacionMundo` |
-| 2 | Los puntos se fijan con `/isorender pos1`/`pos2` sobre el bloque apuntado (P-08). | ERS §6.1 |
-| 3 | «Donde está de pie» = el bloque sobre el que se apoya el jugador (`floor(posY) − 1`). | código: `LiteModIsoRender.fijarPunto` |
-| 4 | Región máxima 64 × 64 × 64 (P-09); resolución 512–4096 px; imagen cuadrada. | ERS RN-003, RN-006; código: `ValidacionRegion.MAX` |
-| 5 | Rangos y valores por defecto de cámara (rotación 0–359 / 45°, elevación 5–90 / 35,264°, zoom 25–400 % / 100 %, desplazamiento ±100 %). | ERS RN-007; `ParametrosCamara` |
-| 6 | Comando `/isorender`, tecla K y textos en español. | ERS §6.1, RNF-011 |
-| 7 | Margen de encuadre del 5 %. | ERS CA-010.1; `ParametrosCamara.MARGEN` |
-| 8 | Las caras del borde de la región se dibujan; las conexiones de vallas/paneles hacia fuera se cortan. | ERS RF-009; código: `VistaRegion` |
-| 9 | Fondo siempre transparente (sin fondo opaco en la v1). | ERS RN-005 |
-| 10 | Solo se garantizan bloques vanilla; los de otros mods, de mejor esfuerzo. LiteLoader sobre Forge no se verificó (CF-03). | ERS RN-010, CF-03 |
-| 11 | Presets de cámara (idea del analista); «frontal» = elevación mínima permitida (5°), no 0°. | ERS RF-022; código: `PresetCamara` |
-| 12 | Se recuerda el último ajuste (cámara, vista, resolución, fondo) al cerrar el menú. | ERS RF-029 |
-| 13 | RF-027 (mensajes en el chat) sube a Must; el render de ítem individual (RF-030) baja a Could. | ERS §6.1, RF-027 |
-| 14 | Corte por altura: solo Y máxima inclusiva; se ignora si está fuera de la región; el encuadre y el nombre usan la caja recortada; no se guarda y Restablecer no lo borra. | ERS RF-015 |
-| 15 | Ítem suelto: si la mano principal está vacía se usa la secundaria; «bloque por ID» = su forma de ítem; ignora la cámara del menú y usa la resolución del menú. | ERS RF-030; código: `renderItem` |
-| 16 | Perspectiva: FOV vertical fijo de 30°; el zoom actúa como ventana; afecta también al PNG; el valor por defecto sigue siendo isométrico. | ERS RF-033; código: `ParametrosCamara.FOV_GRADOS` |
-| 17 | Un armor stand entra si su bloque base está dentro de la región; la vista previa simplificada omite entidades; el PNG siempre las dibuja. | ERS RF-034 |
-| 18 | Umbrales de rendimiento y estabilidad: ≥15 fps (16³) y ≥5 fps (64³) en la vista previa; 32³ a 2048 px en ≤10 s de promedio (≤15 s máximo) en el equipo de referencia (GPU de 4 GB, 16 GB de RAM); memoria ±5 % tras 30 renders; 64³ sin `OutOfMemoryError` con 2 GB; menú usable de 854×480 a 1920×1080. | ERS RNF-002, RNF-003, RNF-009, RNF-012, RNF-014 |
-| 19 | Render en lote (RF-031) fuera de la v1. | ERS RF-031 |
-| 20 | Ejecutor: Claude Code, con el solicitante como supervisor y probador; las horas del plan son equivalentes humanos (P-06). | ERS §6.1; PLAN §1 |
+| 1 | The mod is client-only and works with the loaded chunks, in single-player or on a server. | ERS §6.1; `ValidacionMundo` |
+| 2 | Points are set with `/isorender pos1`/`pos2` on the aimed block (P-08). | ERS §6.1 |
+| 3 | "Where they stand" = the block the player rests on (`floor(posY) − 1`). | code: `LiteModIsoRender.fijarPunto` |
+| 4 | Maximum region 64 × 64 × 64 (P-09); resolution 512–4096 px; square image. | ERS RN-003, RN-006; code: `ValidacionRegion.MAX` |
+| 5 | Camera ranges and defaults (rotation 0–359 / 45°, elevation 5–90 / 35.264°, zoom 25–400% / 100%, offset ±100%). | ERS RN-007; `ParametrosCamara` |
+| 6 | Command `/isorender` and the K key. User-facing text in English (decided 2026-11-14 for a global release; the ERS RNF-011 and P-07 still say Spanish). | CLAUDE.md; ERS RNF-011 |
+| 7 | Framing margin of 5%. | ERS CA-010.1; `ParametrosCamara.MARGEN` |
+| 8 | Faces on the edge of the region are drawn; fence/pane connections toward the outside are cut. | ERS RF-009; code: `VistaRegion` |
+| 9 | Background always transparent (no opaque background in v1). | ERS RN-005 |
+| 10 | Only vanilla blocks are guaranteed; mod blocks are best-effort. LiteLoader on top of Forge was not verified (CF-03). | ERS RN-010, CF-03 |
+| 11 | Camera presets (analyst's idea); "front" = the minimum allowed elevation (5°), not 0°. | ERS RF-022; code: `PresetCamara` |
+| 12 | The last setting (camera, view, resolution, background) is remembered when the menu closes. | ERS RF-029 |
+| 13 | RF-027 (chat messages) goes up to Must; the single-item render (RF-030) goes down to Could. | ERS §6.1, RF-027 |
+| 14 | Height cut: inclusive maximum Y only; ignored if outside the region; framing and name use the cut box; not saved and Reset does not clear it. | ERS RF-015 |
+| 15 | Single item: if the main hand is empty the off hand is used; "block by ID" = its item form; it ignores the menu camera and uses the menu resolution. | ERS RF-030; code: `renderItem` |
+| 16 | Perspective: fixed 30° vertical FOV; zoom acts as a window; it also affects the PNG; the default remains isometric. | ERS RF-033; code: `ParametrosCamara.FOV_GRADOS` |
+| 17 | An armor stand is included if the block at its position is inside the region; the simplified preview omits entities; the PNG always draws them. | ERS RF-034 |
+| 18 | Performance and stability thresholds: ≥15 fps (16³) and ≥5 fps (64³) in the preview; 32³ at 2048 px in ≤10 s on average (≤15 s maximum) on the reference machine (4 GB GPU, 16 GB RAM); memory ±5% after 30 renders; 64³ without `OutOfMemoryError` with 2 GB; menu usable from 854×480 to 1920×1080. | ERS RNF-002, RNF-003, RNF-009, RNF-012, RNF-014 |
+| 19 | Batch rendering (RF-031) is outside v1. | ERS RF-031 |
+| 20 | Executor: Claude Code, with the requester as supervisor and tester; the plan's hours are human-equivalent (P-06). | ERS §6.1; PLAN §1 |
 
-Nota: el ERS §15 exige que el solicitante valide los supuestos; el solicitante aprobó las pruebas funcionales (T-034) pero el ERS no tiene un registro explícito de validación de cada supuesto.
+Note: ERS §15 requires the requester to validate the assumptions; the requester approved the functional tests (T-034) but the ERS has no explicit record of validation of each assumption.
 
-### 11.1 Preguntas abiertas del ERS §13
+### 11.1 Open questions of ERS §13
 
-Resueltas: P-02 (LiteLoader obligatorio), P-05 (licencia MIT), P-11 (entidades decorativas: sí, T-044) y P-15 (ítem suelto: sí, T-042). El resto sigue sin cierre formal en el ERS y el código aplica el supuesto indicado:
+Resolved: P-02 (LiteLoader mandatory), P-05 (MIT license), P-11 (decorative entities: yes, T-044) and P-15 (single item: yes, T-042). The rest has no formal closure in the ERS and the code applies the assumption indicated:
 
-| ID | Pregunta | Supuesto aplicado |
+| ID | Question | Assumption applied |
 |---|---|---|
-| P-01 | Uso de las imágenes | Contenido y portafolio. El ERS dice resolución por defecto 1024 px; el código usa **512** |
-| P-03 | ¿Solo bloques vanilla o también de mods? | Solo vanilla garantizado |
-| P-04 | Resolución máxima y ángulo isométrico por defecto | 512–4096 px; 45° y 35,264° |
-| P-06 | Fecha, presupuesto y equipo (bloqueante para el plan) | Ejecuta Claude Code; sin fecha ni presupuesto |
-| P-07 | Idioma de menú y chat | Español |
-| P-08 | Mecanismo de selección (comandos, varita, clic) | Comandos sobre el bloque apuntado |
-| P-09 | Tamaño máximo y chunks cargados | 64³ y solo chunks cargados |
-| P-10 | Un jugador, servidores o ambos | Ambos, como mod de cliente |
-| P-12 | Vista previa en tiempo real o botón «Actualizar» | Tiempo real, con modo simplificado |
-| P-13 | Otros ajustes del menú (iluminación, margen, recorte, fondo) | Rotación, elevación, zoom, desplazamiento, resolución (más fondo y vista, pedidos después) |
-| P-14 | Imagen cuadrada o recortada a la silueta | Cuadrada |
-| P-16 | Equipo de referencia para rendimiento | GPU de 4 GB, 16 GB de RAM |
+| P-01 | Use of the images | Content and portfolio; default resolution 512 px |
+| P-03 | Only vanilla blocks or also mod blocks? | Only vanilla guaranteed |
+| P-04 | Maximum resolution and default isometric angle | 512–4096 px; 45° and 35.264° |
+| P-06 | Date, budget and team (blocking for the plan) | Claude Code executes; no date or budget |
+| P-07 | Language of menu and chat | English (CLAUDE.md, 2026-11-14); the ERS still says Spanish |
+| P-08 | Selection mechanism (commands, wand, click) | Commands on the aimed block |
+| P-09 | Maximum size and loaded chunks | 64³ and loaded chunks only |
+| P-10 | Single-player, servers or both | Both, as a client mod |
+| P-12 | Real-time preview or "Update" button | Real time, with simplified mode |
+| P-13 | Other menu settings (lighting, margin, crop, background) | Rotation, elevation, zoom, offset, resolution (plus background and view, requested later) |
+| P-14 | Square image or cropped to the silhouette | Square |
+| P-16 | Reference machine for performance | 4 GB GPU, 16 GB RAM |
 
-`CLAUDE.md` indica como pendientes del solicitante P-06, P-08, P-09, P-12 y P-13 (antes de la épica E3, que ya se construyó con los supuestos). Los conflictos CF-01 a CF-05 tienen resolución provisional.
+`CLAUDE.md` lists P-06, P-08, P-09, P-12 and P-13 as pending from the requester (before epic E3, which was already built with the assumptions). Conflicts CF-01 to CF-05 have a provisional resolution.
 
-## 12. Notas de coherencia detectadas al redactar
+## 12. Coherence notes found while writing
 
-Diferencias entre documentos y código (el código manda en este documento y en el manual):
+Differences between documents and code (the code wins in this document and in the manual):
 
-- ERS §11.2 indica `/isorender render [resolución]`, resolución por defecto 1024 y una clave `margen` en la configuración. En el código `render` no admite argumentos (con argumentos cae en el mensaje de uso), la resolución por defecto es 512 (`ResolucionSalida.POR_DEFECTO`) y el margen es la constante `ParametrosCamara.MARGEN`, sin clave de configuración.
-- ERS §11.2 sitúa el archivo «en el directorio de configuración de LiteLoader»: es `liteconfig/common/isorender.properties`.
-- `RenderPrueba` tiene un comentario Javadoc huérfano («True si hay un render… en curso») justo antes de `regionConCorte`, que debería estar sobre `ocupado()`.
-- La versión 0.1.0 está en tres sitios (ver §9) y `validarLitemod` solo comprueba dos.
-- `build.gradle` fija `archivesBaseName = 'IsoRender'`, pero el artefacto documentado y presente en `build/libs` se llama `mod-isorender-0.1.0-mc1.12.2.litemod` (lo nombra el plugin de LiteLoader).
+- The ERS (Spanish) RNF-011 and P-07 still state that user-facing text is in Spanish; `CLAUDE.md` (2026-11-14) and the code use English.
+- The version 1.0.0 lives in three places (see §9) and `validarLitemod` only checks two.
+- `build.gradle` sets `archivesBaseName = 'IsoRender'`, but the documented artifact present in `build/libs` is called `mod-isorender-1.0.0-mc1.12.2.litemod` (the LiteLoader plugin names it).
+- The "only air" check exists twice with different texts: `ValidacionMundo` says `The region contains only air: there are no blocks to render.` (no non-air block in the region) and `GeometriaCacheada` says `The region contains only air.` (blocks exist but nothing drawable came out of them). The second one is a safeguard in the geometry builder.
