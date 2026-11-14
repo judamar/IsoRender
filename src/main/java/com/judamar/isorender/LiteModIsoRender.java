@@ -8,6 +8,7 @@ import com.judamar.isorender.seleccion.ValidacionRegion;
 import com.mumfrey.liteloader.LiteMod;
 import com.judamar.isorender.render.RenderPrueba;
 import com.mumfrey.liteloader.OutboundChatFilter;
+import com.mumfrey.liteloader.PostRenderListener;
 import com.mumfrey.liteloader.RenderListener;
 import com.mumfrey.liteloader.Tickable;
 import com.mumfrey.liteloader.core.LiteLoader;
@@ -21,7 +22,8 @@ import net.minecraft.util.text.TextComponentString;
 import org.lwjgl.input.Keyboard;
 
 /** Clase de entrada. T-009: saludo en el chat. T-010: tecla K y /isorender menu abren una pantalla de prueba. */
-public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, RenderListener {
+public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, RenderListener, PostRenderListener {
+    private final com.judamar.isorender.render.ContornoSeleccion contorno = new com.judamar.isorender.render.ContornoSeleccion();
     private final KeyBinding teclaMenu = new KeyBinding("Abrir menú IsoRender", Keyboard.KEY_K, "IsoRender");
     private final Seleccion seleccion = new Seleccion();
     private boolean saludado;
@@ -108,6 +110,12 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
             decir(mc, "Error al validar la región: " + e);
             e.printStackTrace();
         }
+    }
+
+    /** T-014: tras el mundo, con la camara ya configurada, se dibuja el contorno de la seleccion. */
+    @Override public void onPostRenderEntities(float partialTicks) { }
+    @Override public void onPostRender(float partialTicks) {
+        contorno.dibujar(Minecraft.getMinecraft(), seleccion, partialTicks);
     }
 
     @Override public void onRenderGui(net.minecraft.client.gui.GuiScreen currentScreen) { }
