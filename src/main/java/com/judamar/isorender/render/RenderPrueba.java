@@ -4,6 +4,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.nio.ByteBuffer;
 import javax.imageio.ImageIO;
+import net.minecraft.block.BlockLeaves;
+import net.minecraft.init.Blocks;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
@@ -21,6 +23,9 @@ import org.lwjgl.opengl.GL11;
 public final class RenderPrueba {
     private RenderPrueba() { }
 
+    /** Estado actual de la hoja (fancy o no); leavesFancy es protegido y no tiene getter. */
+    private static boolean hoja(net.minecraft.block.Block b) { return !b.isOpaqueCube(b.getDefaultState()); }
+
     private static void chat(Minecraft mc, String s) {
         if (mc.player != null) mc.player.sendMessage(new TextComponentString("[IsoRender] " + s));
     }
@@ -29,26 +34,43 @@ public final class RenderPrueba {
     public static void ejecutar(Minecraft mc, int[] reg, int res, ParametrosCamara cam) {
         long t0 = System.currentTimeMillis();
         FramebufferRender fbo = null;
-        boolean mats = false;
+        boolean mats = false, lm = false, hojasForzadas = false;
+        int aoPrevio = -1;
+        boolean[] hojasPrevias = null;
         try {
             World w = mc.world;
             if (w == null || mc.player == null) throw new IllegalStateException("no hay mundo cargado");
             BlockPos origen = new BlockPos(reg[0], reg[1], reg[2]);
             int nx = reg[3] - reg[0] + 1, ny = reg[4] - reg[1] + 1, nz = reg[5] - reg[2] + 1;
 
-            // (a) Lectura de bloques: solo getBlockState/isBlockLoaded, nunca setBlockState.
-            BufferBuilder buf = new BufferBuilder(1 << 18);
-            buf.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
-            int dibujados = 0;
-            for (BlockPos p : BlockPos.getAllInBox(origen, new BlockPos(reg[3], reg[4], reg[5]))) {
+            // (a) Geometria por capa. Vista de solo lectura: aire fuera de la region (caras de borde visibles).
+            // Ajustes del jugador forzados durante el render (AO suave y hojas con capa determinista); se restauran en finally.
+            VistaRegion vista = new VistaRegion(w, reg);
+            aoPrevio = mc.gameSettings.ambientOcclusion; mc.gameSettings.ambientOcclusion = 2;
+            hojasPrevias = new boolean[]{hoja(Blocks.LEAVES), hoja(Blocks.LEAVES2)};
+            ((BlockLeaves) Blocks.LEAVES).setGraphicsLevel(true); ((BlockLeaves) Blocks.LEAVES2).setGraphicsLevel(true);
+            hojasForzadas = true;
+            int ini = GeometriaRegion.bytesIniciales(reg);
+            BufferBuilder[] capas = new BufferBuilder[GeometriaRegion.ORDEN_CAPAS.length];
+            for (int i = 0; i < capas.length; i++) { capas[i] = new BufferBuilder(ini); capas[i].begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK); }
+            int dibujados = 0, translucidos = 0, fallidos = 0;
+            // getAllInBoxMutable reutiliza un solo BlockPos: sin objetos por bloque.
+            for (BlockPos.MutableBlockPos p : BlockPos.getAllInBoxMutable(origen, new BlockPos(reg[3], reg[4], reg[5]))) {
                 if (!w.isBlockLoaded(p)) continue;
                 IBlockState s = w.getBlockState(p);
                 if (s.getMaterial() == Material.AIR) continue;
-                // Geometria del bloque en un BufferBuilder propio (no se tocan los chunks del mundo).
-                if (mc.getBlockRendererDispatcher().renderBlock(s, p, w, buf)) dibujados++;
+                int k = GeometriaRegion.indiceCapa(s.getBlock().getBlockLayer().name());
+                if (k < 0) { translucidos++; continue; } // TRANSLUCENT: lo dibuja T-020
+                try {
+                    // renderBlock llama a getActualState (orientacion, conexiones, mitades) con la vista.
+                    if (mc.getBlockRendererDispatcher().renderBlock(s, p, vista, capas[k])) dibujados++;
+                } catch (Throwable e) { fallidos++; } // bloque de mod u otro fallo: se omite (RN-010)
             }
-            buf.finishDrawing();
-            if (dibujados == 0) throw new IllegalStateException("la región solo contiene aire");
+            for (BufferBuilder b : capas) b.finishDrawing();
+            if (dibujados == 0) throw new IllegalStateException("la región solo contiene aire"
+                    + (translucidos > 0 ? " o bloques translúcidos (aún no soportados)" : ""));
+            if (translucidos > 0) chat(mc, translucidos + " bloques translúcidos omitidos");
+            if (fallidos > 0) chat(mc, fallidos + " bloques no se pudieron dibujar y se omitieron");
 
             // (b) Render fuera de pantalla: aislar estado GL.
             fbo = new FramebufferRender(res); // valida rango y límites de GPU; lanza con mensaje en español
@@ -71,7 +93,10 @@ public final class RenderPrueba {
             GlStateManager.enableTexture2D();
             GlStateManager.color(1, 1, 1, 1);
             mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE); // atlas de bloques
-            new WorldVertexBufferUploader().draw(buf); // dibuja y resetea el buffer
+            // Lightmap del mundo apagado: la luz es plena y fija (mismo PNG de dia y de noche); el AO sigue en el color de vertice.
+            mc.entityRenderer.disableLightmap(); lm = true;
+            // Orden: SOLID, CUTOUT_MIPPED, CUTOUT; alphaFunc GREATER 0.1 recorta cristal, hierba alta, antorchas.
+            for (BufferBuilder b : capas) new WorldVertexBufferUploader().draw(b); // dibuja y resetea el buffer
 
             // Lectura de pixeles del FBO (RGBA) y volcado a PNG con alfa (se invierte el eje Y).
             ByteBuffer px = fbo.leerPixeles();
@@ -90,12 +115,16 @@ public final class RenderPrueba {
             ImageIO.write(img, "png", out);
             chat(mc, "Prueba lista " + RES + "x" + RES + " px (" + dibujados + " bloques) en " + out.getPath()
                     + " [" + (System.currentTimeMillis() - t0) + " ms]");
+        } catch (OutOfMemoryError e) {
+            chat(mc, "Memoria insuficiente para dibujar la región; usa una región más pequeña o menos resolución.");
         } catch (Throwable e) {
             chat(mc, "Error en la prueba de render: " + e);
             e.printStackTrace();
         } finally {
             // Restaurar siempre: matrices, atributos GL, framebuffer principal y su viewport.
             try {
+                if (aoPrevio >= 0) mc.gameSettings.ambientOcclusion = aoPrevio;
+                if (hojasForzadas) { ((BlockLeaves) Blocks.LEAVES).setGraphicsLevel(hojasPrevias[0]); ((BlockLeaves) Blocks.LEAVES2).setGraphicsLevel(hojasPrevias[1]); }
                 if (mats) {
                     GlStateManager.matrixMode(GL11.GL_PROJECTION); GlStateManager.popMatrix();
                     GlStateManager.matrixMode(GL11.GL_MODELVIEW); GlStateManager.popMatrix();
