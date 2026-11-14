@@ -30,6 +30,12 @@ public final class RenderPrueba {
         if (geo.fallidos() > 0) chat(mc, geo.fallidos() + " bloques no se pudieron dibujar y se omitieron");
     }
 
+    /** T-021: cuántas entidades de bloque se dibujaron y aviso (CA-013.2) de las que se omitieron. */
+    private static void avisosEntidades(Minecraft mc, ResumenEntidades e) {
+        if (e.avisoDibujadas() != null) chat(mc, e.avisoDibujadas());
+        if (e.avisoFallidas() != null) chat(mc, "Aviso: " + e.avisoFallidas());
+    }
+
     private static void errorAlChat(Minecraft mc, Throwable e) {
         if (e instanceof OutOfMemoryError) chat(mc, "Memoria insuficiente para dibujar la región; usa una región más pequeña o menos resolución.");
         else { chat(mc, "Error en la prueba de render: " + e); e.printStackTrace(); }
@@ -48,6 +54,7 @@ public final class RenderPrueba {
             avisosGeometria(mc, geo);
             // (b) Dibujo con la camara dada.
             BufferedImage img = dibujar(mc, geo, reg, res, cam);
+            avisosEntidades(mc, geo.ultimasEntidades());
             File out = new File(new File(mc.mcDataDir, "isorender-test"), "prueba-" + res + "-" + System.currentTimeMillis() + ".png");
             guardar(img, out);
             chat(mc, "Prueba lista " + res + "x" + res + " px (" + geo.bloques() + " bloques) en " + out.getPath()
@@ -80,6 +87,7 @@ public final class RenderPrueba {
                     totalDibujo += System.nanoTime() - t1;
                     guardar(img, new File(dir, "multi-" + marca + "-" + (i + 1) + "of" + n + "-rot" + Math.round(rot) + ".png"));
                 }
+                avisosEntidades(mc, geo.ultimasEntidades());
                 chat(mc, n + " imágenes de " + res + "x" + res + " px (" + geo.bloques() + " bloques) en " + dir.getPath());
                 chat(mc, String.format("Construcción de geometría: %.1f ms (una vez). Dibujo medio por imagen: %.1f ms.",
                         construccion / 1e6, totalDibujo / 1e6 / n));
@@ -146,6 +154,9 @@ public final class RenderPrueba {
             GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ZERO,
                     GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
             geo.dibujarOpacas(); // reproduce las display lists (sin releer el mundo)
+            // Pasada 1b, entidades de bloque (T-021): cofres, camas, carteles, cabezas... con su TileEntitySpecialRenderer, tras los
+            // solidos (que ocultan lo que quede detras) y antes de las translucidas. Cada una aislada con try/catch; restaura el estado GL.
+            geo.dibujarEntidades(mc, reg);
             // Pasada 2, translucidas (cristal tintado, agua, hielo...): ultima, de atras hacia delante para esta camara.
             // Test de profundidad ACTIVO (se ocultan tras los solidos) pero sin escribir profundidad (no se tapan entre si).
             // Mezcla sobre destino premultiplicado: rgb = src*a + dst*(1-a); alfa = src + dst*(1-src), asi el alfa

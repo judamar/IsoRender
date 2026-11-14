@@ -10,8 +10,11 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.WorldVertexBufferUploader;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.init.Blocks;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import java.util.Collections;
+import java.util.List;
 import org.lwjgl.opengl.GL11;
 
 /**
@@ -38,6 +41,9 @@ public final class GeometriaCacheada implements AutoCloseable {
     // Capa translucida: caras crudas (null = no hay) y el BufferBuilder reutilizado para recompilar la lista ordenada.
     private int[] datosT;
     private BufferBuilder bufT;
+    // T-021: entidades de bloque (cofres, camas, carteles...) recogidas al construir; se dibujan directo, sin display list.
+    private List<TileEntity> entidades = Collections.emptyList();
+    private ResumenEntidades ultimasEntidades = ResumenEntidades.NINGUNA;
     private double rotT = Double.NaN, elevT = Double.NaN; // camara con la que se compilo la lista translucida
 
     private GeometriaCacheada(int[] region, ResumenGeometria resumen, int base) {
@@ -83,7 +89,8 @@ public final class GeometriaCacheada implements AutoCloseable {
             BufferBuilder bt = capas[GeometriaRegion.CAPA_TRANSLUCIDA];
             int[] crudoT = bt.getVertexCount() > 0 ? bt.getVertexState().getRawBuffer() : null;
             for (BufferBuilder b : capas) b.finishDrawing();
-            ResumenGeometria res = new ResumenGeometria(dibujados, fallidos);
+            List<TileEntity> tes = EntidadesBloque.recoger(w, reg); // solo lectura de los chunks cargados
+            ResumenGeometria res = new ResumenGeometria(dibujados, fallidos, tes.size());
             if (res.vacio()) throw new IllegalStateException(res.motivoVacio());
 
             // Subida: una display list por capa que reproduce el buffer (draw tambien lo resetea).
@@ -93,6 +100,7 @@ public final class GeometriaCacheada implements AutoCloseable {
                 try { new WorldVertexBufferUploader().draw(capas[k]); } finally { GlStateManager.glEndList(); }
             }
             GeometriaCacheada g = new GeometriaCacheada(reg, res, base);
+            g.entidades = tes;
             g.datosT = crudoT; g.bufT = crudoT == null ? null : bt;
             ok = true;
             return g;
@@ -111,6 +119,20 @@ public final class GeometriaCacheada implements AutoCloseable {
 
     public int bloques() { return resumen.bloques; }
     public int fallidos() { return resumen.fallidos; }
+    public int entidadesBloque() { return resumen.entidades; }
+
+    /**
+     * T-021: dibuja las entidades de bloque con su renderer especial. Va DESPUES de dibujarOpacas y ANTES de las translucidas,
+     * con la camara activa. Cada entidad que falla se omite y se cuenta en el resultado (CA-013.2).
+     */
+    ResumenEntidades dibujarEntidades(Minecraft mc, int[] reg) {
+        comprobarAbierta();
+        ultimasEntidades = EntidadesBloque.dibujar(mc, entidades, reg);
+        return ultimasEntidades;
+    }
+
+    /** Resultado de la última pasada de entidades de bloque (para avisar en el chat tras dibujar). */
+    ResumenEntidades ultimasEntidades() { return ultimasEntidades; }
 
     /** Dibuja las capas opacas y recortadas (SOLID, CUTOUT_MIPPED, CUTOUT). El llamador fija camara, textura y estado GL. */
     public void dibujarOpacas() {
@@ -148,7 +170,7 @@ public final class GeometriaCacheada implements AutoCloseable {
     public void close() {
         if (cerrada) return;
         cerrada = true;
-        datosT = null; bufT = null;
+        datosT = null; bufT = null; entidades = Collections.emptyList();
         GLAllocation.deleteDisplayLists(base, GeometriaRegion.ORDEN_CAPAS.length);
     }
 }
