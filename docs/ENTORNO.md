@@ -21,3 +21,8 @@ Con caché de Gradle limpia, `setupDecompWorkspace` falla con `ZipException: inv
 
 ## Verificación de T-005
 El log del cliente (`latest.log`) muestra `Successfully added mod IsoRender version 0.1.0` e `Initialising mod IsoRender`. Aviso inocuo: falta `libfliteWrapper.so` (Narrator).
+
+## Hallazgos del prototipo T-011 (observados por el solicitante en el juego)
+- Fondo opaco (alfa 255) en vez de transparente → corregir en T-019 (RF-011, riesgo RP-06).
+- Bloques semitransparentes (p. ej. lana/cristal magenta) salen a medias transparentes y el cristal azul se ve opaco, como hormigón → orden de dibujo y capas translúcidas en T-020 (RF-012).
+- Sin tinte de hierba/hojas ni iluminación → T-017/T-020.
