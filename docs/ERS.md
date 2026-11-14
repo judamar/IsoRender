@@ -1049,10 +1049,10 @@ El mod no usa base de datos. Las entidades de trabajo son:
 
 | **Interfaz** | **Especificación *\[SUPUESTO\]* salvo lo indicado** |
 |---|---|
-| Comandos | /isorender pos1 · /isorender pos2 · /isorender clear · /isorender menu · /isorender render \[resolución\] · /isorender item \[id\] \[meta\] |
+| Comandos | /isorender pos1 · /isorender pos2 · /isorender clear · /isorender menu · /isorender render (usa los ajustes del menú, incluida la resolución) · /isorender item \[id\] \[meta\] |
 | Tecla | «K» abre el menú; reasignable en los controles de Minecraft. |
 | Menú | Vista previa; deslizadores y campos de rotación, elevación, zoom y desplazamiento; selector de resolución; botones Renderizar, Restablecer y presets; estado de la selección (coordenadas y dimensiones). |
-| Configuración | Archivo en el directorio de configuración de LiteLoader: carpetaSalida, resolución (1024), rotación (45), elevación (35,264), zoom (100 %), margen (5 %), tamañoMáximo (64). |
+| Configuración | `<juego>/liteconfig/common/isorender.properties` (directorio de configuración de LiteLoader): carpetaSalida, resolución (512 por defecto, decisión del 2026-11-14), rotación (45), elevación (35,264), zoom (100 %), desplazamientos, vista, fondo, tamanoMaximo (64). El margen (5 %) es una constante, no configurable. |
 | Salida | PNG RGBA de 32 bits, cuadrado N × N, fondo con alfa 0. Nombre: estructura\_\<fecha-hora\>\_\<x1,y1,z1\>\_\<x2,y2,z2\>.png. |
 | Mensajes | Texto en el chat con la ruta del archivo o el error, en español. |
 
@@ -1079,7 +1079,7 @@ El mod no usa base de datos. Las entidades de trabajo son:
 
 | **ID** | **Pregunta** | **Tipo** | **Afecta** | **Supuesto aplicado** |
 |---|---|---|---|---|
-| P-01 | ¿Para qué se usarán las imágenes (wiki, redes, portafolio, servidor propio)? | No bloqueante | RF-025, RNF-004 | Contenido y portafolio; resolución por defecto 1024 px. |
+| P-01 | ¿Para qué se usarán las imágenes (wiki, redes, portafolio, servidor propio)? | No bloqueante | RF-025, RNF-004 | Contenido y portafolio; resolución por defecto 512 px (la implementada y aceptada por el solicitante). |
 | P-02 | ¿LiteLoader es obligatorio o se acepta Forge 1.12.2? | **Resuelta** (13/11/2026) | RF-001, RF-002, RNF-001, RNF-007 | Confirmado: LiteLoader obligatorio; Forge descartado. |
 | P-03 | ¿Solo bloques vanilla o también los de otros mods? | No bloqueante | RF-009, RN-010 | Solo vanilla garantizado. Ver CF-03. |
 | P-04 | ¿Qué resolución máxima y qué ángulo isométrico por defecto? | No bloqueante | RF-017, RF-025 | 512–4096 px; elevación 35,264° y rotación 45°. |
