@@ -20,7 +20,7 @@ public final class ContornoSeleccion {
         if (p2 == null) p2 = p1;
         Entity cam = mc.getRenderViewEntity();
         if (cam == null) return;
-        boolean tocado = false;
+        EstadoGrafico previo = null;
         try {
             // Compensar la camara: posicion interpolada del observador
             double cx = cam.lastTickPosX + (cam.posX - cam.lastTickPosX) * partialTicks;
@@ -32,8 +32,8 @@ public final class ContornoSeleccion {
             double z0 = Math.min(p1[2], p2[2]) - e - cz, z1 = Math.max(p1[2], p2[2]) + 1 + e - cz;
 
             // No se usa glPushAttrib/glPopAttrib: GlStateManager cachea el estado y un pop crudo lo desincroniza
-            // (dejaba el mundo en negro). Se cambia solo via GlStateManager y se restaura a mano en finally.
-            tocado = true;
+            // (dejaba el mundo en negro). Se captura el estado REAL previo y se restaura en finally (EstadoGrafico, T-022).
+            previo = EstadoGrafico.capturarLigero(mc);
             GlStateManager.disableTexture2D();
             GlStateManager.disableLighting();
             GlStateManager.disableCull();
@@ -52,17 +52,7 @@ public final class ContornoSeleccion {
             if (mc.player != null) mc.player.sendMessage(new TextComponentString(
                 "[IsoRender] Error al dibujar el contorno; se desactiva hasta reiniciar el juego: " + t));
         } finally {
-            if (tocado) {
-                // Estado vanilla tras el render del mundo
-                GlStateManager.depthMask(true);
-                GlStateManager.enableDepth();
-                GlStateManager.disableBlend();
-                GlStateManager.enableCull();
-                GlStateManager.enableTexture2D();
-                GlStateManager.enableLighting();
-                GlStateManager.color(1f, 1f, 1f, 1f);
-                GL11.glLineWidth(1f);
-            }
+            if (previo != null) previo.restaurar();
         }
     }
 

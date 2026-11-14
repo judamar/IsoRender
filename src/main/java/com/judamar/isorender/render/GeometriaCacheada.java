@@ -1,6 +1,5 @@
 package com.judamar.isorender.render;
 
-import net.minecraft.block.BlockLeaves;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
@@ -9,7 +8,6 @@ import net.minecraft.client.renderer.GLAllocation;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.WorldVertexBufferUploader;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.init.Blocks;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -59,13 +57,11 @@ public final class GeometriaCacheada implements AutoCloseable {
         if (w == null || mc.player == null) throw new IllegalStateException("no hay mundo cargado");
         BlockPos origen = new BlockPos(reg[0], reg[1], reg[2]);
         VistaRegion vista = new VistaRegion(w, reg); // aire fuera de la region (caras de borde visibles)
-        int aoPrevio = mc.gameSettings.ambientOcclusion;
-        boolean[] hojasPrevias = {hoja(Blocks.LEAVES), hoja(Blocks.LEAVES2)};
+        EstadoGrafico previo = EstadoGrafico.capturarAjustes(mc); // AO y hojas del jugador; se restauran siempre
         int base = -1;
         boolean ok = false;
         try {
-            mc.gameSettings.ambientOcclusion = 2;
-            ((BlockLeaves) Blocks.LEAVES).setGraphicsLevel(true); ((BlockLeaves) Blocks.LEAVES2).setGraphicsLevel(true);
+            previo.forzarAjustesGeometria();
             int ini = GeometriaRegion.bytesIniciales(reg);
             BufferBuilder[] capas = new BufferBuilder[GeometriaRegion.ORDEN_CAPAS.length];
             for (int i = 0; i < capas.length; i++) {
@@ -106,13 +102,9 @@ public final class GeometriaCacheada implements AutoCloseable {
             return g;
         } finally {
             if (!ok && base >= 0) GLAllocation.deleteDisplayLists(base, GeometriaRegion.ORDEN_CAPAS.length);
-            mc.gameSettings.ambientOcclusion = aoPrevio;
-            ((BlockLeaves) Blocks.LEAVES).setGraphicsLevel(hojasPrevias[0]); ((BlockLeaves) Blocks.LEAVES2).setGraphicsLevel(hojasPrevias[1]);
+            previo.restaurar();
         }
     }
-
-    /** Estado actual de la hoja (fancy o no); leavesFancy es protegido y no tiene getter. */
-    private static boolean hoja(net.minecraft.block.Block b) { return !b.isOpaqueCube(b.getDefaultState()); }
 
     /** True si esta cache sigue valida para esa region (misma caja); si no, hay que reconstruir. No detecta cambios de bloques. */
     public boolean valida(int[] otraRegion) { return !cerrada && GeometriaRegion.misma(region, otraRegion); }

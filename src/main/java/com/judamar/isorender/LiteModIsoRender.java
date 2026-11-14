@@ -6,6 +6,8 @@ import com.judamar.isorender.seleccion.Subcomando;
 import com.judamar.isorender.seleccion.ValidacionMundo;
 import com.judamar.isorender.seleccion.ValidacionRegion;
 import com.mumfrey.liteloader.LiteMod;
+import com.judamar.isorender.render.Estres;
+import com.judamar.isorender.render.Fallos;
 import com.judamar.isorender.render.ParametrosCamara;
 import com.judamar.isorender.render.RenderPrueba;
 import com.judamar.isorender.render.ResolucionSalida;
@@ -31,11 +33,11 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
     private boolean saludado;
     /** El filtro de chat corre dentro de sendChatMessage: la pantalla se abre en el siguiente tick. */
     private volatile boolean abrirMenu;
-    /** T-011: la prueba de render se ejecuta en el siguiente frame, dentro de onRender. */
-    private volatile boolean pruebaPendiente;
-    /** T-018: prueba de geometria reutilizada (n imagenes con una sola construccion). */
-    private volatile boolean multiPendiente;
+    /** T-011/T-018/T-022: el render pedido (prueba, prueba-multi, estres) se ejecuta en el siguiente frame, dentro de onRender. Un solo hueco: no se solapan. */
+    private volatile Subcomando pendiente;
     private volatile String pruebaArg = "";
+    /** T-022: estres en curso (un render por frame); null si no hay. */
+    private Estres estres;
 
     @Override public String getName() { return "IsoRender"; }
     @Override public String getVersion() { return "0.1.0"; }
@@ -55,8 +57,12 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         }
         // isPressed() se consume siempre para no acumular pulsaciones
         boolean tecla = teclaMenu.isPressed();
-        if ((tecla || abrirMenu) && mc.currentScreen == null) mc.displayGuiScreen(new PantallaPrueba());
+        boolean abrir = (tecla || abrirMenu) && mc.currentScreen == null;
         abrirMenu = false;
+        if (abrir) {
+            try { mc.displayGuiScreen(new PantallaPrueba()); }
+            catch (Throwable e) { Fallos.informar(mc, "abrir el menú", e); } // RNF-005: un fallo del menu no cierra el juego
+        }
     }
 
     /** Intercepta /isorender en el cliente (no llega al servidor). Devuelve false para cancelar el envio. */
@@ -65,15 +71,23 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         Subcomando sub = Subcomando.parsear(message);
         if (sub == null) return true;
         Minecraft mc = Minecraft.getMinecraft();
-        switch (sub) {
-            case MENU: abrirMenu = true; break;
-            case PRUEBA: pruebaArg = Subcomando.argumento(message); pruebaPendiente = true; break;
-            case PRUEBA_MULTI: pruebaArg = Subcomando.argumento(message); multiPendiente = true; break;
-            case POS1: case POS2: fijarPunto(mc, sub == Subcomando.POS1); break;
-            case CLEAR:
-                decir(mc, seleccion.limpiar() ? "Selección borrada." : "No había ninguna selección.");
-                break;
-            default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | prueba [lado 512-4096] [rotación 0-359] [elevación 5-90] [zoom 25-400] | prueba-multi [n 2-8]");
+        try {
+            switch (sub) {
+                case MENU: abrirMenu = true; break;
+                case PRUEBA: case PRUEBA_MULTI: case ESTRES:
+                    // T-022: un render a la vez; el segundo comando se rechaza en vez de pisar al primero.
+                    if (pendiente != null || estres != null || RenderPrueba.ocupado()) {
+                        decir(mc, "Ya hay un render en curso o pendiente; espera a que termine.");
+                    } else { pruebaArg = Subcomando.argumento(message); pendiente = sub; }
+                    break;
+                case POS1: case POS2: fijarPunto(mc, sub == Subcomando.POS1); break;
+                case CLEAR:
+                    decir(mc, seleccion.limpiar() ? "Selección borrada." : "No había ninguna selección.");
+                    break;
+                default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | prueba [lado 512-4096] [rotación 0-359] [elevación 5-90] [zoom 25-400] | prueba-multi [n 2-8] | estres [n 1-50]");
+            }
+        } catch (Throwable e) {
+            Fallos.informar(mc, "procesar el comando", e); // RNF-005
         }
         return false;
     }
@@ -103,31 +117,41 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
 
     @Override
     public void onRender() {
-        if (!pruebaPendiente && !multiPendiente) return;
-        boolean multi = multiPendiente;
-        pruebaPendiente = false; multiPendiente = false;
         Minecraft mc = Minecraft.getMinecraft();
+        if (estres != null) { avanzarEstres(mc); return; }
+        Subcomando sub = pendiente;
+        if (sub == null) return;
+        pendiente = null;
         try {
             if (mc.world == null || mc.player == null) return;
             int lado = 0, n = 0;
             ParametrosCamara cam = null;
-            try {
-                if (multi) n = RenderPrueba.parsearN(pruebaArg);
-                else {
-                    String[] a = pruebaArg.trim().isEmpty() ? new String[0] : pruebaArg.trim().split("\\s+");
-                    lado = ResolucionSalida.parsear(a.length > 0 ? a[0] : "");
-                    cam = ParametrosCamara.parsear(a.length > 1 ? java.util.Arrays.copyOfRange(a, 1, a.length) : new String[0]);
-                }
-            }
-            catch (IllegalArgumentException e) { decir(mc, e.getMessage()); return; } // CA-025.2: sin archivo
+            // Argumentos invalidos: IllegalArgumentException con mensaje en español (CA-025.2: sin archivo)
+            if (sub == Subcomando.PRUEBA_MULTI) n = RenderPrueba.parsearN(pruebaArg);
+            else if (sub == Subcomando.PRUEBA) {
+                String[] a = pruebaArg.trim().isEmpty() ? new String[0] : pruebaArg.trim().split("\\s+");
+                lado = ResolucionSalida.parsear(a.length > 0 ? a[0] : "");
+                cam = ParametrosCamara.parsear(a.length > 1 ? java.util.Arrays.copyOfRange(a, 1, a.length) : new String[0]);
+            } else Estres.validarArgumento(pruebaArg);
             // Punto reutilizable para el futuro /isorender render: validar y luego renderizar la región.
             String error = ValidacionMundo.validar(seleccion, mc.world, ValidacionRegion.MAX);
             if (error != null) { decir(mc, error); return; }
-            if (multi) RenderPrueba.ejecutarMulti(mc, seleccion.region(), n);
-            else RenderPrueba.ejecutar(mc, seleccion.region(), lado, cam);
+            if (sub == Subcomando.PRUEBA_MULTI) RenderPrueba.ejecutarMulti(mc, seleccion.region(), n);
+            else if (sub == Subcomando.PRUEBA) RenderPrueba.ejecutar(mc, seleccion.region(), lado, cam);
+            else estres = Estres.iniciar(mc, seleccion.region(), pruebaArg);
         } catch (Throwable e) {
-            decir(mc, "Error al validar la región: " + e);
-            e.printStackTrace();
+            Fallos.informar(mc, "preparar el render", e); // RNF-005: nunca cierra el juego ni vuelca la traza al chat
+        }
+    }
+
+    /** T-022: un paso del estres por frame; ante cualquier fallo inesperado se libera la guardia y se informa. */
+    private void avanzarEstres(Minecraft mc) {
+        try {
+            if (estres.paso(mc)) estres = null;
+        } catch (Throwable e) {
+            Fallos.informar(mc, "ejecutar el estrés", e);
+            estres.cerrar();
+            estres = null;
         }
     }
 

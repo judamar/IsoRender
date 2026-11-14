@@ -19,6 +19,15 @@ public final class FramebufferRender implements AutoCloseable {
         return Math.min(GL11.glGetInteger(GL11.GL_MAX_TEXTURE_SIZE), GL11.glGetInteger(GL30.GL_MAX_RENDERBUFFER_SIZE));
     }
 
+    /** VRAM libre en bytes si el driver la expone (extension NVX de NVIDIA); -1 si no se puede saber. */
+    public static long vramLibre() {
+        try {
+            if (org.lwjgl.opengl.GLContext.getCapabilities().GL_NVX_gpu_memory_info)
+                return GL11.glGetInteger(org.lwjgl.opengl.NVXGpuMemoryInfo.GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX) * 1024L;
+        } catch (Throwable e) { /* sin dato: no se limita por VRAM */ }
+        return -1;
+    }
+
     /**
      * El lado es el interno (puede ser el doble del de salida por el supermuestreo, T-019); el rango de salida lo valida
      * el llamador. Lanza IllegalStateException con mensaje en español; no deja recursos a medias.
@@ -38,7 +47,7 @@ public final class FramebufferRender implements AutoCloseable {
             int st = GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER);
             if (st != GL30.GL_FRAMEBUFFER_COMPLETE) throw new IllegalStateException("Framebuffer incompleto (0x"
                     + Integer.toHexString(st) + ") a " + lado + " px; posible falta de memoria de vídeo.");
-        } catch (RuntimeException ex) {
+        } catch (Throwable ex) { // incluye OutOfMemoryError: no dejar el FBO a medias
             close();
             throw ex;
         }
