@@ -25,7 +25,7 @@ Versión v0.4 (adaptada para ejecución con Claude Code). Basado en la ERS v0.3.
 
 **Objetivo:** un mod nuevo que permita seleccionar dos puntos del mundo y generar un PNG isométrico, con fondo transparente, de la estructura que contiene esa región, ajustando la cámara desde un menú con vista previa.
 
-**Usuarios:** jugadores y creadores de contenido. **Alcance:** selección de región, render de estructura, menú interactivo, exportación a PNG y configuración. Quedan fuera WebSocket, atlas, entidades y otros loaders.
+**Usuarios:** jugadores y creadores de contenido. **Alcance:** selección de región, render de estructura, menú interactivo, exportación a PNG y configuración. Quedan fuera WebSocket, atlas, mobs/jugadores/ítems en el suelo y otros loaders.
 
 **Resultado esperado:** un único .litemod para LiteLoader 1.12.2. Se identificaron 31 requerimientos funcionales, 14 no funcionales y 10 reglas de negocio.
 
@@ -37,6 +37,8 @@ Versión v0.4 (adaptada para ejecución con Claude Code). Basado en la ERS v0.3.
 
 - Render isométrico de todos los bloques de la región, con su estado real, transparencias y entidades de bloque.
 
+- Opcional implementado (RF-034, T-044): marcos de objetos, pinturas y armor stands dentro de la región.
+
 - Menú interactivo con vista previa para ajustar rotación, elevación, zoom, desplazamiento y resolución.
 
 - Exportación a PNG con fondo transparente y resolución configurable, y resultado informado en el chat.
@@ -47,7 +49,7 @@ Versión v0.4 (adaptada para ejecución con Claude Code). Basado en la ERS v0.3.
 
 - Exportación por WebSocket, render externo y atlas de ítems (existen en el mod original).
 
-- Entidades, mobs y jugadores dentro de la región.
+- Mobs, jugadores, ítems en el suelo, correas y otras entidades dentro de la región (excepción: marcos de objetos, pinturas y armor stands, RF-034).
 
 - Otras versiones de Minecraft y otros loaders.
 
@@ -66,6 +68,8 @@ Versión v0.4 (adaptada para ejecución con Claude Code). Basado en la ERS v0.3.
 - Render de ítem en la mano o de ítem y bloque por ID (RF-030), del brief original; se estima aparte.
 
 - Corte por altura de la estructura (RF-015): opcional **implementado** (T-043, petición del solicitante, 2026-11-14).
+
+- Entidades decorativas (RF-034): marcos de objetos, pinturas y armor stands, opcional **implementado** (T-044, petición del solicitante, 2026-11-14).
 
 # 4. Stakeholders y roles
 
@@ -190,6 +194,7 @@ Prioridades: 19 Must, 9 Should, 2 Could y 1 Won't. Resumen:
 | RF-031 | Render en lote | Won't | EP-7 |
 | RF-032 | Fondo de la vista previa | Could | EP-4 |
 | RF-033 | Vista isométrica o en perspectiva | Should | EP-4 |
+| RF-034 | Entidades decorativas | Could | EP-3 |
 
 ## 7.1 EP-1 Carga y distribución
 
@@ -799,6 +804,26 @@ Prioridades: 19 Must, 9 Should, 2 Could y 1 Won't. Resumen:
 
 **Notas / dudas:** *\[SUPUESTO\]* Campo de visión fijo de 30°; el zoom actúa como ventana (la cámara no se acerca). *\[SUPUESTO\]* Ámbito: afecta también al PNG. Se mantiene el valor por defecto isométrico.
 
+### RF-034: Entidades decorativas
+
+**Descripción:** El sistema deberá dibujar, en la vista previa y en el PNG, los marcos de objetos, las pinturas y los armor stands cuyo bloque de anclaje (marco, pintura) o bloque base (armor stand) esté dentro de la región. Es la única excepción a RN-001. Solo se lee el mundo (RNF-013).
+
+**Rol(es):** Usuario final \| **Prioridad:** Could (implementado como opcional, T-044)
+
+**Origen:** petición del solicitante (2026-11-14), al ver que el marco de objetos no aparecía.
+
+**Precondiciones:** Región válida con al menos un bloque no aire (la validación de región lee bloques, no entidades).
+
+**Criterios de aceptación:**
+
+- **CA-034.1 (caso feliz):** **Dado** una región con un marco, una pintura y un armor stand, **cuando** se renderiza, **entonces** aparecen con su ítem, rotación y equipo (armadura, objetos en las manos).
+
+- **CA-034.2 (error):** **Dado** una entidad decorativa cuyo renderer falla, **cuando** se renderiza, **entonces** se omite, el resto se dibuja y se avisa en el chat.
+
+- **CA-034.3 (límite):** **Dado** una región con mobs, jugadores, ítems en el suelo o correas, **cuando** se renderiza, **entonces** no aparecen.
+
+**Notas / dudas:** *\[SUPUESTO\]* Un armor stand entra si su bloque base está dentro de la región. La vista previa simplificada (regiones grandes) las omite, como a las entidades de bloque; el PNG siempre las dibuja.
+
 # 8. Requerimientos no funcionales
 
 El solicitante no asignó prioridad a los RNF: todas son *\[SUPUESTO\]*. Los umbrales numéricos marcados como *\[SUPUESTO\]* los propone el analista porque el brief solo dice «unos segundos».
@@ -975,7 +1000,7 @@ El solicitante no asignó prioridad a los RNF: todas son *\[SUPUESTO\]*. Los umb
 
 | **ID** | **Regla** | **Origen** | **Requisitos** |
 |---|---|---|---|
-| RN-001 | Solo se renderizan bloques; no se renderizan mobs, jugadores, ítems en el suelo ni entidades similares *\[SUPUESTO sobre marcos y pinturas\]*. | «Entidades, mobs y jugadores» fuera (brief) | RF-009, RF-013 |
+| RN-001 | Se renderizan bloques, entidades de bloque y, como única excepción, marcos de objetos, pinturas y armor stands. No se renderizan mobs, jugadores, ítems en el suelo, correas ni otras entidades. | «Entidades, mobs y jugadores» fuera (brief) | RF-009, RF-013 |
 | RN-002 | La región es la caja alineada a los ejes que contiene los dos puntos, inclusive; el orden de los puntos no importa. | «Selecciono punto 1 y punto 2» | RF-005 |
 | RN-003 | Tamaño máximo de región: 64 × 64 × 64 bloques *\[SUPUESTO\]*. | Implícito (rendimiento) | RF-007, RNF-014 |
 | RN-004 | Solo se renderizan bloques de chunks cargados en el cliente. | Implícito (mod de cliente) | RF-007 |
@@ -1056,7 +1081,7 @@ El mod no usa base de datos. Las entidades de trabajo son:
 | P-08 | ¿Cómo se seleccionan los puntos: comandos, una varita tipo WorldEdit, clic sobre bloques o ambos? | No bloqueante | RF-003, RF-004 | Comandos sobre el bloque apuntado. |
 | P-09 | ¿Qué tamaño máximo de estructura se espera y funciona solo con chunks cargados? | No bloqueante | RF-007, RN-003, RNF-002, RNF-014 | 64 × 64 × 64 y solo chunks cargados. |
 | P-10 | ¿Se usará en un jugador, en servidores o en ambos? | No bloqueante | RF-003, RN-004 | Ambos, como mod de cliente. |
-| P-11 | ¿Se deben incluir entidades dentro de la estructura (marcos, pinturas, armor stands)? | No bloqueante | RN-001 | No. |
+| P-11 | ¿Se deben incluir entidades dentro de la estructura (marcos, pinturas, armor stands)? | No bloqueante | RN-001 | Sí (solicitante, 2026-11-14): T-044. |
 | P-12 | ¿La vista previa debe ser en tiempo real o basta con un botón «Actualizar»? | No bloqueante | RF-019, RNF-003 | Tiempo real, con modo simplificado en regiones grandes. |
 | P-13 | ¿Qué otros ajustes debe tener el menú además de cámara y ángulo (iluminación, margen, recorte de la imagen, fondo)? | No bloqueante | RF-017 a RF-023 | Rotación, elevación, zoom, desplazamiento y resolución. |
 | P-14 | ¿Qué formato de imagen se prefiere: cuadrada o recortada a la silueta? | No bloqueante | RF-025, RN-006 | Cuadrada. |
@@ -1093,12 +1118,13 @@ El mod no usa base de datos. Las entidades de trabajo son:
 | «Render de un ítem (en mano o por ID)» (RF-02, RF-03) | RF-030 | E10 Opcional |
 | «Renderizar en lote» (RF-10) | RF-031 | Fuera (Won't) |
 | «Bloques con entidad de bloque» (RF-11) | RF-013 | E4 Motor |
+| «Marcos de objetos, pinturas y armor stands» (2026-11-14) | RF-034 | E10 Opcional |
 | Compatibilidad, rendimiento, calidad, estabilidad | RNF-001 a RNF-005 | E3, E4, E8 |
 | Mantenibilidad, distribución, legal | RNF-006, RNF-007, RNF-008 | E1, E7, E9 |
 | Implícitos: contorno, validación, encuadre, estado real, mundo intacto | RF-006, RF-007, RF-010, RF-014, RNF-013 | E3, E4 |
-| Exportación por WebSocket, atlas, entidades | — | Fuera de alcance |
+| Exportación por WebSocket, atlas, mobs, jugadores, ítems en el suelo | — | Fuera de alcance |
 
-La trazabilidad entre requisitos y casos de prueba (CP-01 a CP-31) está en el Plan de Trabajo, sección 7.
+La trazabilidad entre requisitos y casos de prueba (CP-01 a CP-33) está en el Plan de Trabajo, sección 7.
 
 # 15. Criterios globales y DoD
 

@@ -15,7 +15,7 @@ Un mod de cliente para Minecraft 1.12.2, cargado con LiteLoader y entregado como
 - No copiar código ni recursos de isometric-renders (gliscowo) sin verificar y cumplir su licencia.
 - Un fallo de selección, render o menú **no debe cerrar el juego**: se informa en el chat y se restaura el estado gráfico.
 - Código organizado por paquetes (selección, render, menú, configuración), con comentarios en los puntos de render. Textos al usuario en español.
-- Alcance v1: ver ERS §3. Fuera: WebSocket, atlas, entidades, regiones mayores de 64×64×64, otros loaders, lote.
+- Alcance v1: ver ERS §3. Fuera: WebSocket, atlas, mobs/jugadores/ítems en el suelo, regiones mayores de 64×64×64, otros loaders, lote. Opcionales E10 pedidos por el solicitante el 2026-11-14 y ya dentro del alcance: marcos de objetos, pinturas y armor stands (T-044), corte por altura (T-043) e ítem por ID o en la mano (T-042).
 
 ## Cómo trabajar
 1. Una tarea del plan a la vez, en orden y respetando dependencias.
@@ -36,7 +36,7 @@ Gradle 4.10.3 (wrapper) con JDK 8 fijado en `gradle.properties`; plugin `com.ana
 ## Estado del proyecto
 - Decidido: enfoque en estructuras con menú interactivo; LiteLoader obligatorio; ejecuta Claude Code con el solicitante como supervisor y probador.
 - Pendiente del solicitante: P-06 (fecha y presupuesto). P-08, P-09, P-12 y P-13 (selección, tamaño máximo, vista previa, ajustes del menú) antes de la épica E3.
-- Licencia decidida: MIT (2026-11-14). Entidades (marcos, pinturas, armor stands): fuera de la v1, tarea opcional T-044.
+- Licencia decidida: MIT (2026-11-14). El solicitante pidió (2026-11-14) implementar las tareas opcionales T-042, T-043 y T-044.
 - Supuestos activos: comandos `/isorender pos1|pos2|clear|menu|render`, tecla K, región máxima 64³, resolución 512–4096 px, imagen cuadrada, cámara isométrica por defecto (rotación 45°, elevación 35,264°).
 
 ## Definición de terminado

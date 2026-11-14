@@ -102,7 +102,7 @@ final class EntidadesBloque {
     }
 
     /** Deja el estado GL como lo espera la pasada de solidos (y la translucida que sigue), pase lo que pase en el renderer. */
-    private static void restaurarEstado(Minecraft mc, int profundidadMatrices) {
+    static void restaurarEstado(Minecraft mc, int profundidadMatrices) {
         try {
             GlStateManager.matrixMode(GL11.GL_MODELVIEW);
             // Un renderer que fallo a medias puede haber dejado matrices sin sacar: se iguala la pila a la de antes.

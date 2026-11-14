@@ -45,7 +45,7 @@ public final class RenderPrueba {
         if (geo.fallidos() > 0) chat(mc, geo.fallidos() + " bloques no se pudieron dibujar y se omitieron");
     }
 
-    /** T-021: cuántas entidades de bloque se dibujaron y aviso (CA-013.2) de las que se omitieron. */
+    /** T-021 y T-044: cuántas entidades (de bloque o decorativas) se dibujaron y aviso (CA-013.2) de las que se omitieron. */
     private static void avisosEntidades(Minecraft mc, ResumenEntidades e) {
         if (e.avisoDibujadas() != null) chat(mc, e.avisoDibujadas());
         if (e.avisoFallidas() != null) chat(mc, "Aviso: " + e.avisoFallidas());
@@ -95,7 +95,7 @@ public final class RenderPrueba {
                 avisosGeometria(mc, geo);
                 // (b) Dibujo con la camara dada.
                 BufferedImage img = dibujar(mc, geo, reg, res, cam, s -> chat(mc, s));
-                avisosEntidades(mc, geo.ultimasEntidades());
+                avisosEntidades(mc, geo.ultimasEntidades()); avisosEntidades(mc, geo.ultimasDecorativas());
                 File out = destino.get();
                 guardar(img, out);
                 Chat.archivo(mc, exito + " " + res + "x" + res + " px (" + geo.bloques() + " bloques) en ", out,
@@ -132,7 +132,7 @@ public final class RenderPrueba {
                     totalDibujo += System.nanoTime() - t1;
                     guardar(img, new File(dir, "multi-" + marca + "-" + (i + 1) + "of" + n + "-rot" + Math.round(rot) + ".png"));
                 }
-                avisosEntidades(mc, geo.ultimasEntidades());
+                avisosEntidades(mc, geo.ultimasEntidades()); avisosEntidades(mc, geo.ultimasDecorativas());
                 chat(mc, n + " imágenes de " + res + "x" + res + " px (" + geo.bloques() + " bloques) en " + dir.getPath());
                 chat(mc, String.format("Construcción de geometría: %.1f ms (una vez). Dibujo medio por imagen: %.1f ms.",
                         construccion / 1e6, totalDibujo / 1e6 / n));
@@ -223,7 +223,7 @@ public final class RenderPrueba {
         geo.dibujarOpacas(); // reproduce las display lists (sin releer el mundo)
         // Pasada 1b, entidades de bloque (T-021): cofres, camas, carteles, cabezas... con su TileEntitySpecialRenderer, tras los
         // solidos (que ocultan lo que quede detras) y antes de las translucidas. Cada una aislada con try/catch; restaura el estado GL.
-        if (entidades) geo.dibujarEntidades(mc, reg);
+        if (entidades) { geo.dibujarEntidades(mc, reg); geo.dibujarDecorativas(mc, reg); } // T-044: marcos, pinturas, armor stands
         // Pasada 2, translucidas (cristal tintado, agua, hielo...): ultima, de atras hacia delante para esta camara.
         // Test de profundidad ACTIVO (se ocultan tras los solidos) pero sin escribir profundidad (no se tapan entre si).
         // Mezcla sobre destino premultiplicado: rgb = src*a + dst*(1-a); alfa = src + dst*(1-src), asi el alfa

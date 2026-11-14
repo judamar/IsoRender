@@ -1,6 +1,6 @@
 # Casos de prueba y estructuras de referencia (T-033)
 
-Base: docs/PLAN.md §7 (CP-01 a CP-32) y los criterios Dado/Cuando/Entonces de docs/ERS.md. Entorno de pruebas: cliente vanilla 1.12.2 + LiteLoader limpio (instancia `IsoRender-test`) con el único `.litemod`. Mundo: superplano en creativo, de un jugador, con trucos activados.
+Base: docs/PLAN.md §7 (CP-01 a CP-33) y los criterios Dado/Cuando/Entonces de docs/ERS.md. Entorno de pruebas: cliente vanilla 1.12.2 + LiteLoader limpio (instancia `IsoRender-test`) con el único `.litemod`. Mundo: superplano en creativo, de un jugador, con trucos activados.
 
 **Columna Tipo:** `U` = ya cubierto por pruebas unitarias (`./gradlew test`); `J` = se comprueba en el juego (lo ejecuta el solicitante con la lista de abajo; el desarrollador entrega la lista y espera su aprobación, como pide CLAUDE.md); `M` = medición.
 **Estado:** `—` sin ejecutar, `OK`, `FALLA (nota)`.
@@ -17,7 +17,7 @@ Se construyen con comandos vanilla desde el punto de la esquina mínima (jugador
 | ER-5 «Alargada» | 64×1×4 y 4×1×64 | Línea de bloques de colores distintos | CP-08 (encuadre extremo) |
 | ER-6 «Negativa» | 6×6×6 | Cualquier estructura con la región en X, Z negativos | CP-18 (nombre con negativos) |
 | ER-7 «Solo aire» | 5×5×5 | Región vacía sobre el cielo | CP-06 |
-| ER-8 «Marco» | 3×3×1 | Un marco de objetos con un ítem, junto a bloques | Limitación conocida (entidades fuera de la v1, T-044) |
+| ER-8 «Marco» | 3×3×1 | Un marco de objetos con un ítem, junto a bloques; para CP-33 añade pinturas, armor stands y mobs (ver CP-33) | CP-33 |
 
 Ejemplo de comandos para ER-1 (esquina mínima = posición del jugador; ajusta si algo no coincide con tu versión):
 ```
@@ -73,6 +73,7 @@ Pasos con la selección hechos con `/isorender pos1` y `pos2` apuntando a bloque
 | CP-30 | ER-1 | 20 selecciones y renders; comparar el mundo (F3+A, `/clone` de control) | El mundo no cambia | J | OK (T-034, solicitante, 2026-11-14) |
 | CP-31 | — | Solo si T-042 (RF-030) | — | — | no aplica |
 | CP-32 | ER-2 (32³) | RF-015, opcional T-043. Con la región completa, abrir el menú; escribir en «Corte Y» una Y de dentro de la región y pulsar Intro; ver la vista previa; `Renderizar`; repetir con una Y fuera de la región (< y1 y > y2), con texto no numérico y con el campo vacío; reabrir el menú tras «Restablecer» y tras cerrar y reabrir | Con Y dentro: la vista previa y el PNG muestran solo los bloques con y ≤ corte y el encuadre se ajusta a lo visible (CA-015.1, CA-015.3). Fuera de la región o vacío: se dibuja todo (CA-015.2). Texto no numérico: error en español en rojo y se conserva el valor anterior. El rango válido y1..y2 se muestra bajo la etiqueta; «Restablecer» no borra el corte; el nombre del PNG lleva la Y del corte como y2; el mundo no cambia | J | — |
+| CP-33 | ER-8 | RF-034, opcional T-044. Región con bloques y: marco con espada rotada, marco con mapa y marco vacío; pinturas 1×1, 2×1 y 4×4; armor stand con armadura y objetos en las manos; además una vaca, un ítem en el suelo, otro jugador (o tú dentro de la región) y una correa en una valla. Isométrica y perspectiva; vista previa y PNG. Repetir con una región grande (>32³ con vista simplificada) y con una región solo con un armor stand sin bloques | Marcos, pinturas y armor stand aparecen con su ítem, rotación y equipo, sin rótulos de nombre ni sombras (CA-034.1). Vaca, ítem en el suelo, jugador y correa NO aparecen (CA-034.3). Región grande: sin entidades en la vista previa simplificada pero sí en el PNG. Chat: «N entidades decorativas dibujadas». Región solo con armor stand sin bloques: rechazada por «solo contiene aire» (limitación conocida). El mundo no cambia (F3+A / `/clone` de control) | J | — |
 
 ## 3. Procedimiento
 1. **T-034** (funcionales): el desarrollador entrega la lista del §2 por bloques (selección → render → menú → configuración); el solicitante ejecuta y anota Estado y defectos (con severidad).

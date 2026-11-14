@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.GLAllocation;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.WorldVertexBufferUploader;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import net.minecraft.entity.Entity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -42,6 +43,9 @@ public final class GeometriaCacheada implements AutoCloseable {
     // T-021: entidades de bloque (cofres, camas, carteles...) recogidas al construir; se dibujan directo, sin display list.
     private List<TileEntity> entidades = Collections.emptyList();
     private ResumenEntidades ultimasEntidades = ResumenEntidades.NINGUNA;
+    // T-044: marcos, pinturas y armor stands recogidos al construir (solo lectura); se dibujan con el RenderManager, sin display list.
+    private List<Entity> decorativas = Collections.emptyList();
+    private ResumenEntidades ultimasDecorativas = ResumenEntidades.NINGUNA;
     private double rotT = Double.NaN, elevT = Double.NaN; // camara con la que se compilo la lista translucida
     private boolean perspT;
 
@@ -87,7 +91,9 @@ public final class GeometriaCacheada implements AutoCloseable {
             int[] crudoT = bt.getVertexCount() > 0 ? bt.getVertexState().getRawBuffer() : null;
             for (BufferBuilder b : capas) b.finishDrawing();
             List<TileEntity> tes = EntidadesBloque.recoger(w, reg); // solo lectura de los chunks cargados
-            ResumenGeometria res = new ResumenGeometria(dibujados, fallidos, tes.size());
+            List<Entity> deco = EntidadesDecorativas.recoger(w, reg); // marcos, pinturas, armor stands (solo lectura)
+            // Las decorativas cuentan como "entidades": una region con solo un armor stand no esta vacia.
+            ResumenGeometria res = new ResumenGeometria(dibujados, fallidos, tes.size() + deco.size());
             if (res.vacio()) throw new IllegalStateException(res.motivoVacio());
 
             // Subida: una display list por capa que reproduce el buffer (draw tambien lo resetea).
@@ -97,7 +103,7 @@ public final class GeometriaCacheada implements AutoCloseable {
                 try { new WorldVertexBufferUploader().draw(capas[k]); } finally { GlStateManager.glEndList(); }
             }
             GeometriaCacheada g = new GeometriaCacheada(reg, res, base);
-            g.entidades = tes;
+            g.entidades = tes; g.decorativas = deco;
             g.datosT = crudoT; g.bufT = crudoT == null ? null : bt;
             ok = true;
             return g;
@@ -112,6 +118,7 @@ public final class GeometriaCacheada implements AutoCloseable {
 
     public int bloques() { return resumen.bloques; }
     public int fallidos() { return resumen.fallidos; }
+    /** Entidades de bloque y decorativas candidatas. */
     public int entidadesBloque() { return resumen.entidades; }
 
     /**
@@ -126,6 +133,16 @@ public final class GeometriaCacheada implements AutoCloseable {
 
     /** Resultado de la última pasada de entidades de bloque (para avisar en el chat tras dibujar). */
     ResumenEntidades ultimasEntidades() { return ultimasEntidades; }
+
+    /** T-044: dibuja marcos, pinturas y armor stands; mismo punto de la escena que las entidades de bloque. */
+    ResumenEntidades dibujarDecorativas(Minecraft mc, int[] reg) {
+        comprobarAbierta();
+        ultimasDecorativas = EntidadesDecorativas.dibujar(mc, decorativas, reg);
+        return ultimasDecorativas;
+    }
+
+    /** Resultado de la última pasada de entidades decorativas (para avisar en el chat). */
+    ResumenEntidades ultimasDecorativas() { return ultimasDecorativas; }
 
     /** Dibuja las capas opacas y recortadas (SOLID, CUTOUT_MIPPED, CUTOUT). El llamador fija camara, textura y estado GL. */
     public void dibujarOpacas() {
@@ -185,7 +202,7 @@ public final class GeometriaCacheada implements AutoCloseable {
     public void close() {
         if (cerrada) return;
         cerrada = true;
-        datosT = null; bufT = null; entidades = Collections.emptyList();
+        datosT = null; bufT = null; entidades = Collections.emptyList(); decorativas = Collections.emptyList();
         GLAllocation.deleteDisplayLists(base, GeometriaRegion.ORDEN_CAPAS.length);
     }
 }
