@@ -61,13 +61,13 @@ Pasos con la selección hechos con `/isorender pos1` y `pos2` apuntando a bloque
 | CP-18 | ER-6 | Dos renders seguidos; carpeta inexistente; solo lectura; coordenadas negativas | Dos archivos; carpeta creada; error informado sin PNG parcial; nombre válido | J/U | OK (T-028) |
 | CP-19 | — | Éxito y fallo | Ruta una vez; causa en español | J | OK (T-027) |
 | CP-20 | — | Configuración válida, corrupta, ausente; último ajuste | Ver T-029/T-030 | J/U | OK |
-| CP-21 | — | Cliente vanilla + LiteLoader sin Forge | Sin errores atribuibles al mod en `latest.log` | J | OK (T-034, solicitante, 2026-11-14) |
-| CP-22 | ER-3 | 5 renders de 32³ a 2048 px (`/isorender render`) midiendo el tiempo del chat | Promedio ≤ 10 s, máximo ≤ 15 s | M | OK (T-034, solicitante, sin cifras anotadas) |
+| CP-21 | — | Cliente vanilla + LiteLoader sin Forge | Sin errores atribuibles al mod en `latest.log` | J | OK (T-034, solicitante, 2026-11-14; `latest.log` revisado de nuevo el 2026-11-14 tras T-042/43/44: solo líneas ajenas, el sello de seguridad de jinput y el narrador de Linux) |
+| CP-22 | ER-3 | 5 renders de 32³ a 2048 px (`/isorender render`) midiendo el tiempo del chat | Promedio ≤ 10 s, máximo ≤ 15 s | M | OK (T-034, solicitante, 2026-11-14: «el tiempo no se excede demasiado»). Sin cifras del caso exacto (ER-3 a 2048 px). Referencia medida en el log: 5 renders a 4096 px de una región de 33×14×33 tardaron 2278–2668 ms |
 | CP-23 | ER-1 | PNG a zoom 400 % sobre blanco y negro | Bordes sin halos | J | OK (T-019) |
 | CP-24 | ER-1 | 30 fallos forzados | Sin cierre | J | OK (T-022) |
 | CP-25 | — | `./gradlew build` con JDK 8; revisión de paquetes y comentarios | Compila; estructura por paquetes | M | OK |
 | CP-26 | — | Revisión legal | docs/LICENCIAS.md | M | OK (T-032) |
-| CP-27 | ER-3 | 30 renders y 30 aperturas del menú (`estres 30`) | Memoria ±5 %, sin error GL | J/M | OK (T-022) |
+| CP-27 | ER-3 | 30 renders y 30 aperturas del menú (`estres 30`) | Memoria ±5 %, sin error GL | J/M | OK (T-022). Repetido el 2026-11-14 (`estres`, 50 renders de 512 px): 0 con error, 26,7 ms de media, memoria −4,2 % frente al 1.º render, 0 errores de OpenGL |
 | CP-28 | ER-1 | F2 antes/después de renderizar y de cerrar el menú | Fotograma idéntico | J | OK (T-022) |
 | CP-29 | — | Menú en 854×480 y 1920×1080 | Controles visibles y sin solape | J | OK (T-026; 1920×1080 en T-034) |
 | CP-30 | ER-1 | 20 selecciones y renders; comparar el mundo (F3+A, `/clone` de control) | El mundo no cambia | J | OK (T-034, solicitante, 2026-11-14) |
