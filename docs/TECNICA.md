@@ -160,6 +160,7 @@ En 1.12 cofres, camas, carteles y cabezas no tienen modelo estático (o solo par
 - `cameraHitResult = null` para que ningún renderer dibuje el rótulo del nombre; `partialTicks = 0`.
 - Se traslada al origen de la región y se pasan coordenadas relativas (con coordenadas de mundo grandes el `float` perdería precisión).
 - Cada entidad va en try/catch; tras cada una `restaurarEstado` iguala la profundidad de la pila de matrices, apaga la luz de objeto y devuelve el estado que espera la pasada de sólidos. Los campos públicos del dispatcher se guardan y restauran.
+- Iluminación: antes de cada entidad se activa la luz de objeto de vanilla y `luzObjeto()` fuerza por GL directo `GL_COLOR_MATERIAL`, color blanco y luz ambiente 0,4. Solo con `GlStateManager`, cofres y camas salían muy oscuros (la caché no reflejaba el estado real y quedaba el material por defecto de OpenGL); confirmado en el juego.
 - Se dibujan tras los sólidos y antes de las translúcidas.
 
 ### 5.6 `EntidadesDecorativas`
