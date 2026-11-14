@@ -2,7 +2,7 @@ package com.judamar.isorender.seleccion;
 
 /** Parseo puro de la línea "/isorender [sub]". */
 public enum Subcomando {
-    POS1, POS2, CLEAR, MENU, PRUEBA, PRUEBA_MULTI, ESTRES, USO;
+    POS1, POS2, CLEAR, MENU, RENDER, PRUEBA, PRUEBA_MULTI, ESTRES, USO;
 
     /** Devuelve null si la línea no es de /isorender; USO si el subcomando no existe o sobran argumentos. */
     public static Subcomando parsear(String linea) {
@@ -15,6 +15,7 @@ public enum Subcomando {
             case "pos2": return POS2;
             case "clear": return CLEAR;
             case "menu": return MENU;
+            case "render": return RENDER;
             case "prueba": return PRUEBA;
             case "prueba-multi": return PRUEBA_MULTI;
             case "estres": return ESTRES;

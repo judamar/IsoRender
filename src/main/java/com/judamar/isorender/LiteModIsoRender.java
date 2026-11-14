@@ -36,6 +36,8 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
     private volatile boolean abrirMenu;
     /** T-011/T-018/T-022: el render pedido (prueba, prueba-multi, estres) se ejecuta en el siguiente frame, dentro de onRender. Un solo hueco: no se solapan. */
     private volatile Subcomando pendiente;
+    /** T-026: render pedido por el botón Renderizar o /isorender render; onRender lo procesa en el frame siguiente. */
+    private volatile boolean renderMenu;
     private volatile String pruebaArg = "";
     /** T-022: estres en curso (un render por frame); null si no hay. */
     private Estres estres;
@@ -61,7 +63,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         boolean abrir = (tecla || abrirMenu) && mc.currentScreen == null;
         abrirMenu = false;
         if (abrir) {
-            try { mc.displayGuiScreen(new PantallaMenu(seleccion, camara)); }
+            try { mc.displayGuiScreen(new PantallaMenu(seleccion, camara, this::pedirRenderMenu)); }
             catch (Throwable e) { Fallos.informar(mc, "abrir el menú", e); } // RNF-005: un fallo del menu no cierra el juego
         }
     }
@@ -75,6 +77,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         try {
             switch (sub) {
                 case MENU: abrirMenu = true; break;
+                case RENDER: renderMenu = true; break;
                 case PRUEBA: case PRUEBA_MULTI: case ESTRES:
                     // T-022: un render a la vez; el segundo comando se rechaza en vez de pisar al primero.
                     if (pendiente != null || estres != null || RenderPrueba.ocupado()) {
@@ -85,7 +88,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
                 case CLEAR:
                     decir(mc, seleccion.limpiar() ? "Selección borrada." : "No había ninguna selección.");
                     break;
-                default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | prueba [lado 512-4096] [rotación 0-359] [elevación 5-90] [zoom 25-400] [vista iso|persp] | prueba-multi [n 2-8] | estres [n 1-50]");
+                default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | render | prueba [lado 512-4096] [rotación 0-359] [elevación 5-90] [zoom 25-400] [vista iso|persp] | prueba-multi [n 2-8] | estres [n 1-50]");
             }
         } catch (Throwable e) {
             Fallos.informar(mc, "procesar el comando", e); // RNF-005
@@ -116,9 +119,28 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         if (d != null) decir(mc, "Región: " + d[0] + " × " + d[1] + " × " + d[2] + " bloques.");
     }
 
+    private void pedirRenderMenu() { renderMenu = true; }
+
+    /** T-026 (RF-021): render de la región con la resolución y cámara actuales del menú; misma guardia y validación que las pruebas. */
+    private void renderDesdeMenu(Minecraft mc) {
+        try {
+            if (mc.world == null || mc.player == null) return;
+            if (pendiente != null || estres != null || RenderPrueba.ocupado()) {
+                decir(mc, "Ya hay un render en curso o pendiente; espera a que termine.");
+                return;
+            }
+            String error = ValidacionMundo.validar(seleccion, mc.world, ValidacionRegion.MAX);
+            if (error != null) { decir(mc, error); return; }
+            RenderPrueba.ejecutar(mc, seleccion.region(), camara.resolucion(), camara.actual());
+        } catch (Throwable e) {
+            Fallos.informar(mc, "preparar el render", e); // RNF-005
+        }
+    }
+
     @Override
     public void onRender() {
         Minecraft mc = Minecraft.getMinecraft();
+        if (renderMenu) { renderMenu = false; renderDesdeMenu(mc); return; }
         if (estres != null) { avanzarEstres(mc); return; }
         Subcomando sub = pendiente;
         if (sub == null) return;
@@ -134,7 +156,6 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
                 lado = ResolucionSalida.parsear(a.length > 0 ? a[0] : "");
                 cam = ParametrosCamara.parsear(a.length > 1 ? java.util.Arrays.copyOfRange(a, 1, a.length) : new String[0]);
             } else Estres.validarArgumento(pruebaArg);
-            // Punto reutilizable para el futuro /isorender render: validar y luego renderizar la región.
             String error = ValidacionMundo.validar(seleccion, mc.world, ValidacionRegion.MAX);
             if (error != null) { decir(mc, error); return; }
             if (sub == Subcomando.PRUEBA_MULTI) RenderPrueba.ejecutarMulti(mc, seleccion.region(), n);

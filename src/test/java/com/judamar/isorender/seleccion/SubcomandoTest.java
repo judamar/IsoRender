@@ -16,4 +16,8 @@ public class SubcomandoTest {
         assertEquals(Subcomando.PRUEBA_MULTI, Subcomando.parsear("/isorender prueba-multi 3"));
         assertEquals(Subcomando.USO, Subcomando.parsear("/isorender nada"));
     }
+    @Test public void render() {
+        assertEquals(Subcomando.RENDER, Subcomando.parsear("/isorender render"));
+        assertEquals(Subcomando.USO, Subcomando.parsear("/isorender render 2048"));
+    }
 }

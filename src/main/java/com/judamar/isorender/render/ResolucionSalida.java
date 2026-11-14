@@ -4,7 +4,15 @@ package com.judamar.isorender.render;
 public final class ResolucionSalida {
     public static final int MIN = 512, MAX = 4096, POR_DEFECTO = 512;
 
+    private static final int[] CICLO = {512, 1024, 2048, 4096};
+
     private ResolucionSalida() { }
+
+    /** T-026: siguiente valor del ciclo 512, 1024, 2048, 4096: el primero mayor que actual, o 512 si no hay. */
+    public static int siguiente(int actual) {
+        for (int v : CICLO) if (v > actual) return v;
+        return CICLO[0];
+    }
 
     /** Devuelve null si el lado es válido; si no, el mensaje de error en español. */
     public static String validar(int lado) {
