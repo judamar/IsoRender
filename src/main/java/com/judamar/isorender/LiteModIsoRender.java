@@ -2,7 +2,9 @@ package com.judamar.isorender;
 
 import com.judamar.isorender.menu.PantallaPrueba;
 import com.mumfrey.liteloader.LiteMod;
+import com.judamar.isorender.render.RenderPrueba;
 import com.mumfrey.liteloader.OutboundChatFilter;
+import com.mumfrey.liteloader.RenderListener;
 import com.mumfrey.liteloader.Tickable;
 import com.mumfrey.liteloader.core.LiteLoader;
 import java.io.File;
@@ -12,11 +14,13 @@ import net.minecraft.util.text.TextComponentString;
 import org.lwjgl.input.Keyboard;
 
 /** Clase de entrada. T-009: saludo en el chat. T-010: tecla K y /isorender menu abren una pantalla de prueba. */
-public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter {
+public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, RenderListener {
     private final KeyBinding teclaMenu = new KeyBinding("Abrir menú IsoRender", Keyboard.KEY_K, "IsoRender");
     private boolean saludado;
     /** El filtro de chat corre dentro de sendChatMessage: la pantalla se abre en el siguiente tick. */
     private volatile boolean abrirMenu;
+    /** T-011: la prueba de render se ejecuta en el siguiente frame, dentro de onRender. */
+    private volatile boolean pruebaPendiente;
 
     @Override public String getName() { return "IsoRender"; }
     @Override public String getVersion() { return "0.1.0"; }
@@ -47,9 +51,21 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter {
         if (!m.equals("/isorender") && !m.startsWith("/isorender ")) return true;
         if (m.equals("/isorender menu")) {
             abrirMenu = true;
+        } else if (m.equals("/isorender prueba")) {
+            pruebaPendiente = true;
         } else {
-            Minecraft.getMinecraft().player.sendMessage(new TextComponentString("[IsoRender] Uso: /isorender menu"));
+            Minecraft.getMinecraft().player.sendMessage(new TextComponentString("[IsoRender] Uso: /isorender menu | prueba"));
         }
         return false;
     }
+
+    @Override
+    public void onRender() {
+        if (!pruebaPendiente) return;
+        pruebaPendiente = false;
+        RenderPrueba.ejecutar(Minecraft.getMinecraft());
+    }
+
+    @Override public void onRenderGui(net.minecraft.client.gui.GuiScreen currentScreen) { }
+    @Override public void onSetupCameraTransform() { }
 }
