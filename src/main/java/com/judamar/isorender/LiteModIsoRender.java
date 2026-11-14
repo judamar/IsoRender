@@ -30,6 +30,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
     private final com.judamar.isorender.render.ContornoSeleccion contorno = new com.judamar.isorender.render.ContornoSeleccion();
     private final KeyBinding teclaMenu = new KeyBinding("Abrir menú IsoRender", Keyboard.KEY_K, "IsoRender");
     private final Seleccion seleccion = new Seleccion();
+    private final com.judamar.isorender.menu.EstadoCamara camara = new com.judamar.isorender.menu.EstadoCamara();
     private boolean saludado;
     /** El filtro de chat corre dentro de sendChatMessage: la pantalla se abre en el siguiente tick. */
     private volatile boolean abrirMenu;
@@ -60,7 +61,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         boolean abrir = (tecla || abrirMenu) && mc.currentScreen == null;
         abrirMenu = false;
         if (abrir) {
-            try { mc.displayGuiScreen(new PantallaMenu(seleccion)); }
+            try { mc.displayGuiScreen(new PantallaMenu(seleccion, camara)); }
             catch (Throwable e) { Fallos.informar(mc, "abrir el menú", e); } // RNF-005: un fallo del menu no cierra el juego
         }
     }
