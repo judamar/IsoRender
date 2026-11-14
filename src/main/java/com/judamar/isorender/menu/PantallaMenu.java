@@ -2,15 +2,18 @@ package com.judamar.isorender.menu;
 
 import java.io.IOException;
 import com.judamar.isorender.render.Fallos;
+import com.judamar.isorender.render.VistaPrevia;
+import com.judamar.isorender.render.VistaPreviaCalculo;
 import com.judamar.isorender.seleccion.Seleccion;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
+import net.minecraft.client.gui.ScaledResolution;
 import org.lwjgl.input.Keyboard;
 
 /**
  * T-023 (RF-016) y T-024 (RF-017, RF-018, RF-023): menú con un deslizador y un campo numérico por ajuste de cámara.
- * La vista previa (T-025) y el botón Renderizar activo (T-026) se añaden sobre esta pantalla.
+ * La vista previa (T-025) está en VistaPrevia; el botón Renderizar activo (T-026) se añaden sobre esta pantalla.
  * No pausa el juego y no modifica el mundo.
  */
 public class PantallaMenu extends GuiScreen {
@@ -20,6 +23,7 @@ public class PantallaMenu extends GuiScreen {
     private final EstadoCamara camara;
     private final Deslizador[] deslizadores = new Deslizador[Parametro.values().length];
     private final GuiTextField[] campos = new GuiTextField[Parametro.values().length];
+    private final VistaPrevia vista = new VistaPrevia(); // T-025: se crea aquí, no en initGui (initGui se repite al redimensionar)
     private String error;
 
     public PantallaMenu(Seleccion seleccion, EstadoCamara camara) { this.seleccion = seleccion; this.camara = camara; }
@@ -45,7 +49,7 @@ public class PantallaMenu extends GuiScreen {
         buttonList.add(new GuiButton(ID_CERRAR, x, height - 28, ancho, 20, "Cerrar"));
     }
 
-    @Override public void onGuiClosed() { Keyboard.enableRepeatEvents(false); }
+    @Override public void onGuiClosed() { Keyboard.enableRepeatEvents(false); vista.close(); }
 
     private void alDeslizar(Parametro p, double valor) {
         error = null;
@@ -78,6 +82,10 @@ public class PantallaMenu extends GuiScreen {
             super.drawScreen(mouseX, mouseY, partialTicks);
             for (GuiTextField c : campos) c.drawTextBox();
             if (error != null) drawString(fontRenderer, error, X, Y0 + Parametro.values().length * FILA, 0xFF5555);
+            // Vista previa (T-025): recuadro a la derecha de los controles; la escala de GUI fija el tamaño real del FBO.
+            int[] r = VistaPreviaCalculo.recuadro(width, height);
+            if (r == null) drawCenteredString(fontRenderer, "Ventana demasiado pequeña para la vista previa", width / 2, height - 72, 0xFFAA00);
+            else vista.dibujar(mc, seleccion, camara.actual(), r[0], r[1], r[2], new ScaledResolution(mc).getScaleFactor());
         } catch (Throwable e) { // RNF-005: un fallo al dibujar el menu lo cierra y avisa; no cierra el juego
             Fallos.informar(mc, "dibujar el menú", e);
             mc.displayGuiScreen(null);

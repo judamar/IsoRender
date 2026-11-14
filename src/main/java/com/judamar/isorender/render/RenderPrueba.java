@@ -63,7 +63,7 @@ public final class RenderPrueba {
      * T-022 (RNF-014): lee la geometria solo si la memoria alcanza (con un GC previo si no); si no, rechaza con mensaje
      * en español en vez de arriesgar un OutOfMemoryError. Si aun asi falta memoria, el OOM lo informa el llamador.
      */
-    static GeometriaCacheada construirControlado(Minecraft mc, int[] reg) {
+    public static GeometriaCacheada construirControlado(Minecraft mc, int[] reg) {
         long vol = GeometriaRegion.volumen(reg);
         String m = EstimacionMemoria.comprobarGeometria(vol, EstimacionMemoria.libre());
         if (m != null) {
@@ -182,6 +182,49 @@ public final class RenderPrueba {
     }
 
     /**
+     * Dibuja la escena (camara + opacas + entidades de bloque + translucidas) en el FBO YA enlazado y limpio. Compartido por
+     * el PNG final y la vista previa del menu (T-025). El llamador captura y restaura el estado GL.
+     * @param entidades dibujar entidades de bloque (la vista previa simplificada las omite)
+     * @param reordenarT reordenar las translucidas para esta camara (false = reutiliza el orden anterior)
+     */
+    static void dibujarEscena(Minecraft mc, GeometriaCacheada geo, int[] reg, ParametrosCamara cam, boolean entidades, boolean reordenarT) {
+        int nx = reg[3] - reg[0] + 1, ny = reg[4] - reg[1] + 1, nz = reg[5] - reg[2] + 1;
+        // Cámara ortográfica parametrizable con encuadre automático (T-016). Sobrescribe proyeccion y modelview: EstadoGrafico las recarga.
+        CamaraGL.aplicar(cam, nx, ny, nz, reg[0], reg[1], reg[2]);
+
+        GlStateManager.enableDepth();
+        GlStateManager.depthFunc(GL11.GL_LEQUAL);
+        GlStateManager.disableCull();
+        GlStateManager.disableLighting();
+        GlStateManager.disableBlend();
+        GlStateManager.enableAlpha();
+        GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
+        GlStateManager.enableTexture2D();
+        GlStateManager.color(1, 1, 1, 1);
+        mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE); // atlas de bloques
+        // Lightmap del mundo apagado: la luz es plena y fija (mismo PNG de dia y de noche); el AO sigue en el color de vertice.
+        mc.entityRenderer.disableLightmap();
+        // Pasada 1, opacas: SOLID, CUTOUT_MIPPED, CUTOUT; alphaFunc GREATER 0.1 recorta hierba alta, antorchas.
+        // El FBO guarda color PREMULTIPLICADO (rgb*a, a): sin mezcla (SRC_ALPHA, ZERO) para el color y alfa tal cual.
+        GlStateManager.enableBlend();
+        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ZERO,
+                GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+        geo.dibujarOpacas(); // reproduce las display lists (sin releer el mundo)
+        // Pasada 1b, entidades de bloque (T-021): cofres, camas, carteles, cabezas... con su TileEntitySpecialRenderer, tras los
+        // solidos (que ocultan lo que quede detras) y antes de las translucidas. Cada una aislada con try/catch; restaura el estado GL.
+        if (entidades) geo.dibujarEntidades(mc, reg);
+        // Pasada 2, translucidas (cristal tintado, agua, hielo...): ultima, de atras hacia delante para esta camara.
+        // Test de profundidad ACTIVO (se ocultan tras los solidos) pero sin escribir profundidad (no se tapan entre si).
+        // Mezcla sobre destino premultiplicado: rgb = src*a + dst*(1-a); alfa = src + dst*(1-src), asi el alfa
+        // acumulado del PNG es correcto incluso sobre fondo transparente (RF-011, CA-011.2).
+        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+                GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+        GlStateManager.depthMask(false);
+        geo.dibujarTranslucidas(cam.rotacion, cam.elevacion, reordenarT);
+        GlStateManager.depthMask(true);
+    }
+
+    /**
      * Dibuja la geometria cacheada con la camara dada en un FBO de (res*factor)^2, lo lee por franjas y lo reduce a res x res (el FBO es premultiplicado; ver ConversorImagen).
      * Restaura SIEMPRE el estado GL previo (EstadoGrafico) y libera el FBO, tambien si falla; avisa si queda un error GL.
      */
@@ -191,45 +234,12 @@ public final class RenderPrueba {
         EstadoGrafico previo = EstadoGrafico.capturarCompleto(mc);
         FramebufferRender fbo = null;
         try {
-            int nx = reg[3] - reg[0] + 1, ny = reg[4] - reg[1] + 1, nz = reg[5] - reg[2] + 1;
             // Render fuera de pantalla: aislar estado GL.
             fbo = new FramebufferRender(res * factor); // lado interno; valida límites de GPU; lanza con mensaje en español
 
             fbo.enlazarYLimpiar(); // viewport res x res; limpia con alfa 0 y profundidad
 
-            // Cámara ortográfica parametrizable con encuadre automático (T-016). Sobrescribe proyeccion y modelview: EstadoGrafico las recarga.
-            CamaraGL.aplicar(cam, nx, ny, nz, reg[0], reg[1], reg[2]);
-
-            GlStateManager.enableDepth();
-            GlStateManager.depthFunc(GL11.GL_LEQUAL);
-            GlStateManager.disableCull();
-            GlStateManager.disableLighting();
-            GlStateManager.disableBlend();
-            GlStateManager.enableAlpha();
-            GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
-            GlStateManager.enableTexture2D();
-            GlStateManager.color(1, 1, 1, 1);
-            mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE); // atlas de bloques
-            // Lightmap del mundo apagado: la luz es plena y fija (mismo PNG de dia y de noche); el AO sigue en el color de vertice.
-            mc.entityRenderer.disableLightmap();
-            // Pasada 1, opacas: SOLID, CUTOUT_MIPPED, CUTOUT; alphaFunc GREATER 0.1 recorta hierba alta, antorchas.
-            // El FBO guarda color PREMULTIPLICADO (rgb*a, a): sin mezcla (SRC_ALPHA, ZERO) para el color y alfa tal cual.
-            GlStateManager.enableBlend();
-            GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ZERO,
-                    GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-            geo.dibujarOpacas(); // reproduce las display lists (sin releer el mundo)
-            // Pasada 1b, entidades de bloque (T-021): cofres, camas, carteles, cabezas... con su TileEntitySpecialRenderer, tras los
-            // solidos (que ocultan lo que quede detras) y antes de las translucidas. Cada una aislada con try/catch; restaura el estado GL.
-            geo.dibujarEntidades(mc, reg);
-            // Pasada 2, translucidas (cristal tintado, agua, hielo...): ultima, de atras hacia delante para esta camara.
-            // Test de profundidad ACTIVO (se ocultan tras los solidos) pero sin escribir profundidad (no se tapan entre si).
-            // Mezcla sobre destino premultiplicado: rgb = src*a + dst*(1-a); alfa = src + dst*(1-src), asi el alfa
-            // acumulado del PNG es correcto incluso sobre fondo transparente (RF-011, CA-011.2).
-            GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
-                    GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-            GlStateManager.depthMask(false);
-            geo.dibujarTranslucidas(cam.rotacion, cam.elevacion);
-            GlStateManager.depthMask(true);
+            dibujarEscena(mc, geo, reg, cam, true, true);
 
             // Lectura del FBO por franjas (RGBA, origen abajo-izquierda) y reduccion factor x factor con alfa
             // premultiplicado: bordes suavizados y sin halo; fondo exactamente 0x00000000 (RF-011, RNF-004).

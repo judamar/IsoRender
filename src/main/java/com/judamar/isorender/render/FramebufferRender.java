@@ -70,6 +70,9 @@ public final class FramebufferRender implements AutoCloseable {
         fbo.bindFramebuffer(true);
     }
 
+    /** T-025: enlaza la textura de color del FBO para dibujarla como imagen (vista previa del menú). */
+    public void enlazarTextura() { fbo.bindFramebufferTexture(); }
+
     /**
      * Lee {@code filas} filas RGBA (origen abajo-izquierda) desde la fila y0 del FBO enlazado. Por franjas para no
      * reservar de golpe lado*lado*4 bytes (a 8192 px serían 256 MB). El buffer debe caber en lado*filas*4.

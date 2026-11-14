@@ -47,6 +47,17 @@ public final class ParametrosCamara {
         return crear(v[0], v[1], v[2], 0, 0);
     }
 
+    /** Igualdad por valor (T-025: la vista previa repinta solo cuando la cámara cambia). */
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ParametrosCamara)) return false;
+        ParametrosCamara c = (ParametrosCamara) o;
+        return Double.compare(rotacion, c.rotacion) == 0 && Double.compare(elevacion, c.elevacion) == 0
+                && Double.compare(zoom, c.zoom) == 0 && Double.compare(despX, c.despX) == 0 && Double.compare(despY, c.despY) == 0;
+    }
+
+    @Override public int hashCode() { return java.util.Objects.hash(rotacion, elevacion, zoom, despX, despY); }
+
     private static void comprobar(String n, double v, double min, double max, String u) {
         if (!(v >= min && v <= max)) // también rechaza NaN
             throw new IllegalArgumentException(n + " fuera de rango: " + v + u + ". Debe estar entre " + min + u + " y " + max + u + ".");

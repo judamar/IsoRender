@@ -63,4 +63,12 @@ public class ParametrosCamaraTest {
         try { ParametrosCamara.parsear(new String[] {"x"}); fail(); } catch (IllegalArgumentException e) { }
         try { ParametrosCamara.parsear(new String[] {"45", "35", "999"}); fail(); } catch (IllegalArgumentException e) { }
     }
+
+    @Test public void igualdadPorValor() {
+        ParametrosCamara a = ParametrosCamara.crear(10, 20, 100, 0.5, 0), b = ParametrosCamara.crear(10, 20, 100, 0.5, 0);
+        assertEquals(a, b);
+        assertEquals(a.hashCode(), b.hashCode());
+        assertNotEquals(a, ParametrosCamara.crear(11, 20, 100, 0.5, 0));
+        assertNotEquals(a, ParametrosCamara.crear(10, 20, 100, 0.5, 0.1));
+    }
 }

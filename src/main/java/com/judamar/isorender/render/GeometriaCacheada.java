@@ -137,10 +137,14 @@ public final class GeometriaCacheada implements AutoCloseable {
      * de CamaraGL). Debe ir DESPUES de dibujarOpacas, con blend activo y depthMask(false) (lo fija el llamador).
      * Recompila la lista solo si la direccion de vista cambio desde la ultima vez.
      */
-    public void dibujarTranslucidas(double rotacion, double elevacion) {
+    public void dibujarTranslucidas(double rotacion, double elevacion) { dibujarTranslucidas(rotacion, elevacion, true); }
+
+    /** T-025: con reordenar=false reutiliza la lista ya compilada (vista previa simplificada); solo compila si nunca se compiló. */
+    public void dibujarTranslucidas(double rotacion, double elevacion, boolean reordenar) {
         comprobarAbierta();
         if (datosT == null) return;
-        if (rotacion != rotT || elevacion != elevT) {
+        boolean nunca = Double.isNaN(rotT);
+        if (nunca || (reordenar && (rotacion != rotT || elevacion != elevT))) {
             // Reordena las caras y vuelve a compilar la lista (GL_COMPILE sobre un nombre ya usado la reemplaza).
             int[] orden = OrdenTranslucido.ordenar(datosT, DefaultVertexFormats.BLOCK.getIntegerSize(), rotacion, elevacion);
             bufT.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
