@@ -17,7 +17,7 @@ import org.lwjgl.input.Keyboard;
  * No pausa el juego y no modifica el mundo.
  */
 public class PantallaMenu extends GuiScreen {
-    private static final int ID_RENDERIZAR = 100, ID_CERRAR = 101;
+    private static final int ID_RENDERIZAR = 100, ID_CERRAR = 101, ID_FONDO = 102;
     private static final int X = 20, ANCHO_DESLIZADOR = 150, ANCHO_CAMPO = 50, FILA = 26, Y0 = 44;
     private final Seleccion seleccion;
     private final EstadoCamara camara;
@@ -41,6 +41,7 @@ public class PantallaMenu extends GuiScreen {
             c.setText(Parametro.formato(v));
             campos[i] = c;
         }
+        buttonList.add(new GuiButton(ID_FONDO, X, Y0 + Parametro.values().length * FILA, 110, 20, "Fondo: " + camara.fondo().etiqueta));
         int ancho = 150, x = width / 2 - ancho / 2;
         // CA-016.3: sin región completa, Renderizar queda deshabilitado (la acción real llega en T-026)
         GuiButton renderizar = new GuiButton(ID_RENDERIZAR, x, height - 52, ancho, 20, "Renderizar");
@@ -81,11 +82,14 @@ public class PantallaMenu extends GuiScreen {
             drawCenteredString(fontRenderer, TextoSeleccion.describir(seleccion), width / 2, 28, completa ? 0x55FF55 : 0xFFAA00);
             super.drawScreen(mouseX, mouseY, partialTicks);
             for (GuiTextField c : campos) c.drawTextBox();
-            if (error != null) drawString(fontRenderer, error, X, Y0 + Parametro.values().length * FILA, 0xFF5555);
+            if (error != null) { // bajo el botón de fondo, ajustado a su ancho para no invadir Renderizar/Cerrar
+                int ye = Y0 + Parametro.values().length * FILA + 24;
+                for (String l : fontRenderer.listFormattedStringToWidth(error, 112)) { drawString(fontRenderer, l, X, ye, 0xFF5555); ye += 9; }
+            }
             // Vista previa (T-025): recuadro a la derecha de los controles; la escala de GUI fija el tamaño real del FBO.
             int[] r = VistaPreviaCalculo.recuadro(width, height);
             if (r == null) drawCenteredString(fontRenderer, "Ventana demasiado pequeña para la vista previa", width / 2, height - 72, 0xFFAA00);
-            else vista.dibujar(mc, seleccion, camara.actual(), r[0], r[1], r[2], new ScaledResolution(mc).getScaleFactor());
+            else vista.dibujar(mc, seleccion, camara.actual(), camara.fondo(), r[0], r[1], r[2], new ScaledResolution(mc).getScaleFactor());
         } catch (Throwable e) { // RNF-005: un fallo al dibujar el menu lo cierra y avisa; no cierra el juego
             Fallos.informar(mc, "dibujar el menú", e);
             mc.displayGuiScreen(null);
@@ -118,6 +122,7 @@ public class PantallaMenu extends GuiScreen {
     @Override
     protected void actionPerformed(GuiButton boton) throws IOException {
         if (boton.id == ID_CERRAR) mc.displayGuiScreen(null);
+        else if (boton.id == ID_FONDO) boton.displayString = "Fondo: " + camara.siguienteFondo().etiqueta;
     }
 
     @Override

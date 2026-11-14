@@ -37,8 +37,8 @@ public final class VistaPrevia implements AutoCloseable {
     private long ultimoReorden;
     private int frame;
 
-    public void dibujar(Minecraft mc, Seleccion sel, ParametrosCamara cam, int x, int y, int lado, int escala) {
-        tablero(x, y, lado);
+    public void dibujar(Minecraft mc, Seleccion sel, ParametrosCamara cam, FondoVista fondo, int x, int y, int lado, int escala) {
+        if (fondo == FondoVista.TABLERO) tablero(x, y, lado); else Gui.drawRect(x, y, x + lado, y + lado, fondo.argb);
         try {
             actualizar(mc, sel, cam, lado, escala);
         } catch (Throwable e) { // RNF-005: la vista previa falla sola; el menú sigue abierto
