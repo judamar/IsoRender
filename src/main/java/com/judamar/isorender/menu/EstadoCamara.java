@@ -16,6 +16,12 @@ public final class EstadoCamara {
     /** Pasa al siguiente fondo de la vista previa y lo devuelve. */
     public FondoVista siguienteFondo() { return fondo = fondo.siguiente(); }
 
+    /** Alterna entre vista isométrica y perspectiva; devuelve true si queda en perspectiva. */
+    public boolean alternarPerspectiva() {
+        actual = actual.conPerspectiva(!actual.perspectiva);
+        return actual.perspectiva;
+    }
+
     /** Cambia un ajuste (limitado al rango) y devuelve el valor realmente aplicado. */
     public double fijar(Parametro p, double valor) {
         actual = p.con(actual, valor);

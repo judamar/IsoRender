@@ -85,7 +85,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
                 case CLEAR:
                     decir(mc, seleccion.limpiar() ? "Selección borrada." : "No había ninguna selección.");
                     break;
-                default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | prueba [lado 512-4096] [rotación 0-359] [elevación 5-90] [zoom 25-400] | prueba-multi [n 2-8] | estres [n 1-50]");
+                default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | prueba [lado 512-4096] [rotación 0-359] [elevación 5-90] [zoom 25-400] [vista iso|persp] | prueba-multi [n 2-8] | estres [n 1-50]");
             }
         } catch (Throwable e) {
             Fallos.informar(mc, "procesar el comando", e); // RNF-005

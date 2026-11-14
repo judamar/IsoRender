@@ -64,4 +64,28 @@ public class OrdenTranslucidoTest {
         OrdenTranslucido.ordenar(d, IV, 0, 0);
         assertArrayEquals(copia, d);
     }
+
+    @Test public void perspectivaOrdenaPorDistanciaAlOjo() {
+        // Ojo en (0,0,10). Caras en x=+-3,z=0 (dist^2 109) y z=-8 (dist^2 324): la de z=-8 es la mas lejana.
+        int[] d = unir(cara(3, 0, 0, 1), cara(0, 0, -8, 2), cara(-3, 0, 0, 3));
+        int[] o = OrdenTranslucido.ordenar(d, IV, 0, 0, 10);
+        assertEquals(2, marca(o, 0));
+        assertEquals(1, marca(o, 1)); // empate (misma distancia): conserva el orden original
+        assertEquals(3, marca(o, 2));
+        // Con camara ortografica rotacion 90 (x menor = mas cerca) el orden de las x seria otro: la cara 1 (x=3) la primera.
+        assertEquals(1, marca(OrdenTranslucido.ordenar(unir(cara(3, 0, 0, 1), cara(-3, 0, 0, 3)), IV, 90, 0), 0));
+        // Ojo lateral (10,0,0): ahora la cara de x=-3 es la mas lejana, y la de z=-8 queda entre ambas.
+        o = OrdenTranslucido.ordenar(d, IV, 10, 0, 0);
+        assertEquals(3, marca(o, 0));
+        assertEquals(2, marca(o, 1));
+        assertEquals(1, marca(o, 2));
+    }
+
+    @Test public void perspectivaDifiereDelOrtografico() {
+        // Dos caras a distinta z pero con el ojo muy cerca de la mas lejana en z y lateral: la distancia manda, no la z de vision.
+        int[] d = unir(cara(0, 0, 0, 1), cara(8, 0, -2, 2)); // ortografico rot 0: z=0 mas cerca que z=-2 -> orden [2,1]
+        assertEquals(2, marca(OrdenTranslucido.ordenar(d, IV, 0, 0), 0));
+        // ojo en (8,0,-10): la cara 2 esta a 8, la 1 a ~12,8 -> la 1 es la mas lejana -> orden [1,2]
+        assertEquals(1, marca(OrdenTranslucido.ordenar(d, IV, 8, 0, -10), 0));
+    }
 }

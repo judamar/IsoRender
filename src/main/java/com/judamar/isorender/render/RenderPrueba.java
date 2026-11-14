@@ -220,7 +220,7 @@ public final class RenderPrueba {
         GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
                 GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
         GlStateManager.depthMask(false);
-        geo.dibujarTranslucidas(cam.rotacion, cam.elevacion, reordenarT);
+        geo.dibujarTranslucidas(cam, reordenarT);
         GlStateManager.depthMask(true);
     }
 

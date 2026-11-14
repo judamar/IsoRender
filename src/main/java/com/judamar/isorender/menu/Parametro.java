@@ -37,7 +37,7 @@ public enum Parametro {
             case DESP_X: dx = v / 100; break;
             default: dy = v / 100;
         }
-        return ParametrosCamara.limitado(r, e, z, dx, dy);
+        return ParametrosCamara.limitado(r, e, z, dx, dy, p.perspectiva);
     }
 
     /** Posición 0..1 de un valor dentro del rango (para el deslizador). */

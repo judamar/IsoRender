@@ -26,6 +26,21 @@ final class OrdenTranslucido {
 
     /** Devuelve una copia con las caras reordenadas de la mas lejana a la mas cercana (estable en empates). */
     static int[] ordenar(int[] datos, int intsVertice, double rotacion, double elevacion) {
+        return ordenar(datos, intsVertice, (x, y, z) -> cercania(x, y, z, rotacion, elevacion));
+    }
+
+    /**
+     * Camara en perspectiva: ordena por distancia al ojo (ox,oy,oz), en coordenadas de mundo como los vertices
+     * (la mas lejana primero, estable). Mide la distancia al centroide: vale para caras de bloque.
+     */
+    static int[] ordenar(int[] datos, int intsVertice, double ox, double oy, double oz) {
+        return ordenar(datos, intsVertice, (x, y, z) -> -((x - ox) * (x - ox) + (y - oy) * (y - oy) + (z - oz) * (z - oz)));
+    }
+
+    /** Mayor = mas cerca de la camara. */
+    private interface Cercania { double de(double x, double y, double z); }
+
+    private static int[] ordenar(int[] datos, int intsVertice, Cercania medida) {
         final int porCara = 4 * intsVertice, n = datos.length / porCara;
         final double[] cerca = new double[n];
         Integer[] idx = new Integer[n];
@@ -35,7 +50,7 @@ final class OrdenTranslucido {
                 int o = q * porCara + v * intsVertice;
                 x += Float.intBitsToFloat(datos[o]); y += Float.intBitsToFloat(datos[o + 1]); z += Float.intBitsToFloat(datos[o + 2]);
             }
-            cerca[q] = cercania(x / 4, y / 4, z / 4, rotacion, elevacion);
+            cerca[q] = medida.de(x / 4, y / 4, z / 4);
             idx[q] = q;
         }
         Arrays.sort(idx, Comparator.comparingDouble(q -> cerca[q])); // TimSort: estable

@@ -26,7 +26,7 @@ import org.lwjgl.opengl.GL11;
  * configurar a mano cada atributo y dejar GL_ARRAY_BUFFER limpio. Si T-025 mide que no basta, se cambia aqui.
  *
  * T-020: la capa TRANSLUCENT va aparte: se guardan sus caras crudas y su display list se recompila ordenada de atras
- * hacia delante (OrdenTranslucido) solo cuando cambian rotacion o elevacion; zoom y desplazamiento no alteran el orden.
+ * hacia delante (OrdenTranslucido) solo cuando cambian rotacion, elevacion o modo (isometrica/perspectiva); zoom y desplazamiento no alteran el orden.
  * Es lo barato aqui: ordenar N caras (N en miles) y volver a compilar una lista, sin releer el mundo.
  *
  * Solo hilo de render. Usar con try/finally y close().
@@ -43,6 +43,7 @@ public final class GeometriaCacheada implements AutoCloseable {
     private List<TileEntity> entidades = Collections.emptyList();
     private ResumenEntidades ultimasEntidades = ResumenEntidades.NINGUNA;
     private double rotT = Double.NaN, elevT = Double.NaN; // camara con la que se compilo la lista translucida
+    private boolean perspT;
 
     private GeometriaCacheada(int[] region, ResumenGeometria resumen, int base) {
         this.region = region.clone(); this.resumen = resumen; this.base = base;
@@ -139,20 +140,38 @@ public final class GeometriaCacheada implements AutoCloseable {
      */
     public void dibujarTranslucidas(double rotacion, double elevacion) { dibujarTranslucidas(rotacion, elevacion, true); }
 
-    /** T-025: con reordenar=false reutiliza la lista ya compilada (vista previa simplificada); solo compila si nunca se compiló. */
+    /** Cámara ortográfica con esa rotación y elevación (ver la sobrecarga con ParametrosCamara). */
     public void dibujarTranslucidas(double rotacion, double elevacion, boolean reordenar) {
+        dibujarTranslucidas(ParametrosCamara.crear(rotacion, elevacion, 100, 0, 0), reordenar);
+    }
+
+    /**
+     * T-025: con reordenar=false reutiliza la lista ya compilada (vista previa simplificada); solo compila si nunca se compiló.
+     * El orden depende de rotación, elevación y modo (en perspectiva, de la distancia al ojo); zoom y desplazamiento no lo cambian.
+     */
+    public void dibujarTranslucidas(ParametrosCamara cam, boolean reordenar) {
         comprobarAbierta();
         if (datosT == null) return;
         boolean nunca = Double.isNaN(rotT);
-        if (nunca || (reordenar && (rotacion != rotT || elevacion != elevT))) {
+        if (nunca || (reordenar && (cam.rotacion != rotT || cam.elevacion != elevT || cam.perspectiva != perspT))) {
             // Reordena las caras y vuelve a compilar la lista (GL_COMPILE sobre un nombre ya usado la reemplaza).
-            int[] orden = OrdenTranslucido.ordenar(datosT, DefaultVertexFormats.BLOCK.getIntegerSize(), rotacion, elevacion);
+            int iv = DefaultVertexFormats.BLOCK.getIntegerSize();
+            int[] orden;
+            if (cam.perspectiva) {
+                // Ojo en coordenadas de mundo (las de los vertices): centro de la región + D * dirección hacia la cámara.
+                int nx = region[3] - region[0] + 1, ny = region[4] - region[1] + 1, nz = region[5] - region[2] + 1;
+                double d = cam.distanciaPerspectiva(nx, ny, nz), r = Math.toRadians(cam.rotacion), e = Math.toRadians(cam.elevacion);
+                orden = OrdenTranslucido.ordenar(datosT, iv,
+                        region[0] + nx / 2.0 - d * Math.sin(r) * Math.cos(e),
+                        region[1] + ny / 2.0 + d * Math.sin(e),
+                        region[2] + nz / 2.0 + d * Math.cos(r) * Math.cos(e));
+            } else orden = OrdenTranslucido.ordenar(datosT, iv, cam.rotacion, cam.elevacion);
             bufT.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
             bufT.addVertexData(orden);
             bufT.finishDrawing();
             GlStateManager.glNewList(base + GeometriaRegion.CAPA_TRANSLUCIDA, GL11.GL_COMPILE);
             try { new WorldVertexBufferUploader().draw(bufT); } finally { GlStateManager.glEndList(); }
-            rotT = rotacion; elevT = elevacion;
+            rotT = cam.rotacion; elevT = cam.elevacion; perspT = cam.perspectiva;
         }
         GlStateManager.callList(base + GeometriaRegion.CAPA_TRANSLUCIDA);
     }

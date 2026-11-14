@@ -62,7 +62,7 @@ Jerarquía: Épica → Tarea. Horas: O = optimista, P = probable, Pe = pesimista
 | **E5** | **Menú interactivo y salida** | | | | **38** | **68** | **126** | **72,8** |
 | T-023 | Pantalla base del menú; apertura por tecla y comando | RF-016 | Desarrollador | T-011 | 6 | 10 | 18 | 10,7 |
 | T-024 | Controles de rotación, elevación, zoom y desplazamiento; entrada numérica | RF-017, RF-018, RF-023, RNF-012 | Desarrollador | T-023, T-016 | 10 | 18 | 32 | 19,0 |
-| T-025 | Vista previa en vivo dentro del menú | RF-019, RNF-003 | Desarrollador | T-024, T-018 | 10 | 20 | 40 | 21,7 |
+| T-025 | Vista previa en vivo dentro del menú (incluye selector de fondo y toggle de perspectiva, peticiones del 2026-11-14) | RF-019, RNF-003, RF-032, RF-033 | Desarrollador | T-024, T-018 | 10 | 20 | 40 | 21,7 |
 | T-026 | Selector de resolución, botón Renderizar, restablecer y presets | RF-020, RF-021, RF-022 | Desarrollador | T-025, T-019 | 6 | 10 | 18 | 10,7 |
 | T-027 | Mensajes de resultado y error en el chat; textos en español | RF-027, RNF-011 | Desarrollador | T-013, T-019 | 3 | 5 | 10 | 5,5 |
 | T-028 | Nombres de archivo únicos y carpeta de salida | RF-024, RF-026 | Desarrollador | T-019 | 3 | 5 | 8 | 5,2 |

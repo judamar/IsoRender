@@ -1,6 +1,8 @@
 package com.judamar.isorender.menu;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.judamar.isorender.render.ParametrosCamara;
@@ -58,5 +60,17 @@ public class ParametroTest {
             try { Parametro.ROTACION.leer(s); fail(s); }
             catch (IllegalArgumentException e) { assertEquals(true, e.getMessage().startsWith("Rotación no válido")); }
         }
+    }
+
+    @Test public void conConservaPerspectiva() {
+        EstadoCamara e = new EstadoCamara();
+        assertTrue(e.alternarPerspectiva());
+        e.fijar(Parametro.ROTACION, 30);
+        e.fijar(Parametro.ZOOM, 9999);
+        assertTrue(e.actual().perspectiva);
+        assertEquals(30, e.actual().rotacion, 0);
+        assertFalse(e.alternarPerspectiva());
+        assertFalse(e.actual().perspectiva);
+        assertEquals(30, e.actual().rotacion, 0);
     }
 }

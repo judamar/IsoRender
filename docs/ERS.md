@@ -188,6 +188,8 @@ Prioridades: 19 Must, 9 Should, 2 Could y 1 Won't. Resumen:
 | RF-029 | Guardado de configuración y último ajuste | Should | EP-6 |
 | RF-030 | Render de ítem o bloque individual | Could | EP-7 |
 | RF-031 | Render en lote | Won't | EP-7 |
+| RF-032 | Fondo de la vista previa | Could | EP-4 |
+| RF-033 | Vista isométrica o en perspectiva | Should | EP-4 |
 
 ## 7.1 EP-1 Carga y distribución
 
@@ -761,6 +763,36 @@ Prioridades: 19 Must, 9 Should, 2 Could y 1 Won't. Resumen:
 
 **Notas / dudas:** *\[SUPUESTO\]* Pierde sentido con el enfoque en estructuras.
 
+### RF-032: Fondo de la vista previa
+
+**Descripción:** El menú deberá permitir elegir el fondo de la vista previa (tablero que revela la transparencia, blanco, gris, negro o verde croma).
+
+**Rol(es):** Usuario final \| **Prioridad:** Could
+
+**Origen:** Petición del solicitante durante la verificación de T-025 (2026-11-14); responde en parte a P-13.
+
+**Criterios de aceptación:**
+
+- **CA-032.1 (caso feliz):** **Dado** el menú abierto, **cuando** el usuario pulsa el botón de fondo, **entonces** la vista previa cambia al siguiente fondo y lo conserva al cerrar y reabrir el menú.
+
+- **CA-032.2 (límite):** **Dado** cualquier fondo elegido, **cuando** se exporta el PNG, **entonces** el PNG sigue siendo transparente (el fondo solo afecta a la vista previa; confirmado por el solicitante).
+
+### RF-033: Vista isométrica o en perspectiva
+
+**Descripción:** El menú deberá permitir alternar entre la vista isométrica (proyección ortográfica, por defecto) y una vista en perspectiva, tanto en la vista previa como en el PNG exportado.
+
+**Rol(es):** Usuario final \| **Prioridad:** Should
+
+**Origen:** Petición del solicitante durante la verificación de T-025 (2026-11-14).
+
+**Criterios de aceptación:**
+
+- **CA-033.1 (caso feliz):** **Dado** el menú abierto, **cuando** el usuario alterna a «Perspectiva», **entonces** la vista previa muestra la estructura con perspectiva y al volver a «Isométrica» recupera la vista anterior.
+
+- **CA-033.2 (límite):** **Dado** el modo perspectiva, **cuando** el usuario usa cualquier rotación, elevación, zoom o desplazamiento permitidos, **entonces** la estructura cabe en el encuadre automático (con el margen de RF-010) salvo lo que el usuario desplace o amplíe, y no se recorta por el plano cercano.
+
+**Notas / dudas:** *\[SUPUESTO\]* Campo de visión fijo de 30°; el zoom actúa como ventana (la cámara no se acerca). *\[SUPUESTO\]* Ámbito: afecta también al PNG. Se mantiene el valor por defecto isométrico.
+
 # 8. Requerimientos no funcionales
 
 El solicitante no asignó prioridad a los RNF: todas son *\[SUPUESTO\]*. Los umbrales numéricos marcados como *\[SUPUESTO\]* los propone el analista porque el brief solo dice «unos segundos».
@@ -1042,7 +1074,8 @@ El mod no usa base de datos. Las entidades de trabajo son:
 | «Selecciono punto 1 y punto 2» (mensaje) | RF-003, RF-004, RF-005, RF-007, RF-008 | E3 Selección de región |
 | «crea el render de eso» (mensaje) | RF-009, RF-010, RF-014, RF-021 | E4 Motor, E5 Menú |
 | «menú interactivo para cuadrar el render» (mensaje) | RF-016, RF-019, RF-020, RF-022 | E5 Menú interactivo |
-| «camara, ángulo, etc» (mensaje) | RF-017, RF-018, RF-023 | E4 Motor, E5 Menú |
+| «camara, ángulo, etc» (mensaje) | RF-017, RF-018, RF-023, RF-033 | E4 Motor, E5 Menú |
+| «un selector para elegir el fondo de la preview» (2026-11-14) | RF-032 | E5 Menú |
 | «El mod se carga en LiteLoader» (RF-01) | RF-001 | E2 Prototipo |
 | «un solo archivo .litemod» | RF-002, RNF-007 | E7 Empaquetado |
 | «fondo transparente» (RF-04) | RF-011 | E4 Motor |

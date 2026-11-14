@@ -17,7 +17,8 @@ import org.lwjgl.input.Keyboard;
  * No pausa el juego y no modifica el mundo.
  */
 public class PantallaMenu extends GuiScreen {
-    private static final int ID_RENDERIZAR = 100, ID_CERRAR = 101, ID_FONDO = 102;
+    private static final int ID_RENDERIZAR = 100, ID_CERRAR = 101, ID_FONDO = 102, ID_VISTA = 103;
+    private static final int ANCHO_VISTA = 100; // botón «Vista» junto a «Fondo» (X+110+6 .. 236 < VistaPreviaCalculo.X_MIN)
     private static final int X = 20, ANCHO_DESLIZADOR = 150, ANCHO_CAMPO = 50, FILA = 26, Y0 = 44;
     private final Seleccion seleccion;
     private final EstadoCamara camara;
@@ -41,13 +42,22 @@ public class PantallaMenu extends GuiScreen {
             c.setText(Parametro.formato(v));
             campos[i] = c;
         }
-        buttonList.add(new GuiButton(ID_FONDO, X, Y0 + Parametro.values().length * FILA, 110, 20, "Fondo: " + camara.fondo().etiqueta));
+        int yFila = Y0 + Parametro.values().length * FILA;
+        buttonList.add(new GuiButton(ID_FONDO, X, yFila, 110, 20, "Fondo: " + camara.fondo().etiqueta));
+        buttonList.add(new GuiButton(ID_VISTA, X + 110 + 6, yFila, ANCHO_VISTA, 20, textoVista(camara.actual().perspectiva)));
         int ancho = 150, x = width / 2 - ancho / 2;
         // CA-016.3: sin región completa, Renderizar queda deshabilitado (la acción real llega en T-026)
         GuiButton renderizar = new GuiButton(ID_RENDERIZAR, x, height - 52, ancho, 20, "Renderizar");
         renderizar.enabled = false;
         buttonList.add(renderizar);
         buttonList.add(new GuiButton(ID_CERRAR, x, height - 28, ancho, 20, "Cerrar"));
+    }
+
+    /** «Vista: Perspectiva» si cabe en el botón (con margen de 4 px a cada lado); si no, la forma corta. */
+    private String textoVista(boolean perspectiva) {
+        String largo = "Vista: " + (perspectiva ? "Perspectiva" : "Isométrica");
+        if (fontRenderer.getStringWidth(largo) <= ANCHO_VISTA - 8) return largo;
+        return "Vista: " + (perspectiva ? "Persp." : "Isom.");
     }
 
     @Override public void onGuiClosed() { Keyboard.enableRepeatEvents(false); vista.close(); }
@@ -123,6 +133,7 @@ public class PantallaMenu extends GuiScreen {
     protected void actionPerformed(GuiButton boton) throws IOException {
         if (boton.id == ID_CERRAR) mc.displayGuiScreen(null);
         else if (boton.id == ID_FONDO) boton.displayString = "Fondo: " + camara.siguienteFondo().etiqueta;
+        else if (boton.id == ID_VISTA) boton.displayString = textoVista(camara.alternarPerspectiva());
     }
 
     @Override

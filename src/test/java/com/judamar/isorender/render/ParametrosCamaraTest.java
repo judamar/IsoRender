@@ -71,4 +71,59 @@ public class ParametrosCamaraTest {
         assertNotEquals(a, ParametrosCamara.crear(11, 20, 100, 0.5, 0));
         assertNotEquals(a, ParametrosCamara.crear(10, 20, 100, 0.5, 0.1));
     }
+
+    private static final int[][] TAMANOS = {{1, 1, 1}, {64, 1, 64}, {1, 64, 1}, {64, 64, 64}, {10, 3, 40}};
+
+    @Test public void perspectivaEncuadraLasEsquinas() {
+        double t = Math.tan(Math.toRadians(ParametrosCamara.FOV_GRADOS / 2));
+        for (int[] g : TAMANOS)
+            for (double rot = 0; rot <= 359; rot += 15)
+                for (double el = 5; el <= 90; el += 5) {
+                    ParametrosCamara p = ParametrosCamara.crear(rot, el, 100, 0, 0, true);
+                    double d = p.distanciaPerspectiva(g[0], g[1], g[2]), near = p.planosPerspectiva(g[0], g[1], g[2])[0];
+                    double r = Math.toRadians(rot), e = Math.toRadians(el);
+                    for (int i = 0; i < 8; i++) {
+                        double x = (i & 1) == 0 ? -g[0] / 2.0 : g[0] / 2.0, y = (i & 2) == 0 ? -g[1] / 2.0 : g[1] / 2.0,
+                                z = (i & 4) == 0 ? -g[2] / 2.0 : g[2] / 2.0;
+                        double xp = x * Math.cos(r) + z * Math.sin(r), zp = -x * Math.sin(r) + z * Math.cos(r);
+                        double yp = y * Math.cos(e) - zp * Math.sin(e), c = y * Math.sin(e) + zp * Math.cos(e);
+                        double prof = d - c; // distancia delante de la camara
+                        assertTrue(prof > near && near > 0);
+                        assertTrue(Math.abs(xp) / (prof * t) <= 1 - ParametrosCamara.MARGEN + 1e-9);
+                        assertTrue(Math.abs(yp) / (prof * t) <= 1 - ParametrosCamara.MARGEN + 1e-9);
+                    }
+                }
+    }
+
+    @Test public void perspectivaDistanciaYPlanos() {
+        for (int[] g : TAMANOS)
+            for (double rot : new double[] {0, 45, 200})
+                for (double el : new double[] {5, 35.264, 90}) {
+                    ParametrosCamara p = ParametrosCamara.crear(rot, el, 100, 0, 0, true);
+                    double rad = 0.5 * Math.sqrt(g[0] * g[0] + g[1] * g[1] + g[2] * g[2]);
+                    double[] pl = p.planosPerspectiva(g[0], g[1], g[2]);
+                    assertTrue(p.distanciaPerspectiva(g[0], g[1], g[2]) > rad);
+                    assertTrue(pl[1] > pl[0] && pl[0] > 0);
+                }
+    }
+
+    @Test public void perspectivaEnIgualdadYConstructores() {
+        ParametrosCamara a = ParametrosCamara.crear(10, 20, 100, 0, 0, true);
+        assertNotEquals(a, ParametrosCamara.crear(10, 20, 100, 0, 0));
+        assertNotEquals(a.hashCode(), ParametrosCamara.crear(10, 20, 100, 0, 0).hashCode());
+        assertEquals(a, ParametrosCamara.crear(10, 20, 100, 0, 0).conPerspectiva(true));
+        assertFalse(ParametrosCamara.POR_DEFECTO.perspectiva);
+        assertFalse(ParametrosCamara.crear(10, 20, 100, 0, 0).perspectiva);
+        assertFalse(ParametrosCamara.limitado(10, 20, 100, 0, 0).perspectiva);
+        assertTrue(ParametrosCamara.limitado(10, 20, 100, 0, 0, true).perspectiva);
+    }
+
+    @Test public void parsearVista() {
+        String[] base = {"45", "35", "100"};
+        assertFalse(ParametrosCamara.parsear(base).perspectiva);
+        assertTrue(ParametrosCamara.parsear(new String[] {"45", "35", "100", "persp"}).perspectiva);
+        assertFalse(ParametrosCamara.parsear(new String[] {"45", "35", "100", "iso"}).perspectiva);
+        try { ParametrosCamara.parsear(new String[] {"45", "35", "100", "otra"}); fail(); }
+        catch (IllegalArgumentException e) { assertTrue(e.getMessage().contains("Vista no válida")); }
+    }
 }
