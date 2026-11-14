@@ -9,20 +9,23 @@ import org.lwjgl.opengl.GL30;
 
 import java.nio.ByteBuffer;
 
-/** T-015 (RF-025, RNF-009): FBO cuadrado de lado N con profundidad. Usar con try/finally y close(). Solo hilo de render. */
+/** T-015/T-019 (RF-025, RNF-009): FBO cuadrado de lado N con profundidad. Usar con try/finally y close(). Solo hilo de render. */
 public final class FramebufferRender implements AutoCloseable {
     private final int lado;
     private Framebuffer fbo;
 
-    /** Lanza IllegalArgumentException/IllegalStateException con mensaje en español; no deja recursos a medias. */
+    /** Lado máximo que la GPU admite como textura y como renderbuffer (profundidad). */
+    public static int maximoGpu() {
+        return Math.min(GL11.glGetInteger(GL11.GL_MAX_TEXTURE_SIZE), GL11.glGetInteger(GL30.GL_MAX_RENDERBUFFER_SIZE));
+    }
+
+    /**
+     * El lado es el interno (puede ser el doble del de salida por el supermuestreo, T-019); el rango de salida lo valida
+     * el llamador. Lanza IllegalStateException con mensaje en español; no deja recursos a medias.
+     */
     public FramebufferRender(int lado) {
-        String err = ResolucionSalida.validar(lado);
-        if (err != null) throw new IllegalArgumentException(err);
         this.lado = lado;
-        // El hardware debe soportar el tamaño como textura y como renderbuffer (profundidad).
-        int maxTex = GL11.glGetInteger(GL11.GL_MAX_TEXTURE_SIZE);
-        int maxRb = GL11.glGetInteger(GL30.GL_MAX_RENDERBUFFER_SIZE);
-        int max = Math.min(maxTex, maxRb);
+        int max = maximoGpu();
         if (lado > max) throw new IllegalStateException("Tu tarjeta gráfica no soporta " + lado
                 + " px (máximo " + max + " px). Elige una resolución menor.");
         while (GL11.glGetError() != GL11.GL_NO_ERROR) { } // limpiar errores ajenos antes de medir los nuestros
@@ -31,6 +34,10 @@ public final class FramebufferRender implements AutoCloseable {
             int e = GL11.glGetError();
             if (e != GL11.GL_NO_ERROR) throw new IllegalStateException("Error de OpenGL (0x" + Integer.toHexString(e)
                     + ") al crear el framebuffer de " + lado + " px; posible falta de memoria de vídeo.");
+            fbo.bindFramebuffer(false);
+            int st = GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER);
+            if (st != GL30.GL_FRAMEBUFFER_COMPLETE) throw new IllegalStateException("Framebuffer incompleto (0x"
+                    + Integer.toHexString(st) + ") a " + lado + " px; posible falta de memoria de vídeo.");
         } catch (RuntimeException ex) {
             close();
             throw ex;
@@ -54,12 +61,14 @@ public final class FramebufferRender implements AutoCloseable {
         fbo.bindFramebuffer(true);
     }
 
-    /** Lee los píxeles RGBA (origen abajo-izquierda) del FBO enlazado. */
-    public ByteBuffer leerPixeles() {
-        ByteBuffer px = BufferUtils.createByteBuffer(lado * lado * 4);
+    /**
+     * Lee {@code filas} filas RGBA (origen abajo-izquierda) desde la fila y0 del FBO enlazado. Por franjas para no
+     * reservar de golpe lado*lado*4 bytes (a 8192 px serían 256 MB). El buffer debe caber en lado*filas*4.
+     */
+    public void leerFranja(ByteBuffer destino, int y0, int filas) {
+        destino.clear();
         GL11.glPixelStorei(GL11.GL_PACK_ALIGNMENT, 1);
-        GL11.glReadPixels(0, 0, lado, lado, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, px);
-        return px;
+        GL11.glReadPixels(0, y0, lado, filas, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, destino);
     }
 
     /** Libera el FBO y devuelve el framebuffer principal con su viewport. Idempotente. */

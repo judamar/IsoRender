@@ -12,6 +12,11 @@ public final class ResolucionSalida {
                 : "Resolución fuera de rango: " + lado + " px. Debe estar entre " + MIN + " y " + MAX + " px.";
     }
 
+    /** T-019: factor de supermuestreo (render interno a lado*factor y reduccion por promedio): 2 si cabe en la GPU, si no 1. */
+    public static int factorSupermuestreo(int lado, int maxGpu) {
+        return lado * 2 <= maxGpu ? 2 : 1;
+    }
+
     /** Texto vacío o null = por defecto. Lanza IllegalArgumentException con mensaje en español si no es válido. */
     public static int parsear(String texto) {
         if (texto == null || texto.trim().isEmpty()) return POR_DEFECTO;

@@ -8,10 +8,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.util.text.TextComponentString;
+import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 
 /**
- * T-011 (prototipo) / T-018: render isometrico a FBO propio y PNG con alfa. Dos fases separadas:
+ * T-011 (prototipo) / T-018 / T-019: render isometrico a FBO propio y PNG con alfa. Dos fases separadas:
  * CONSTRUCCION de geometria (GeometriaCacheada, lee el mundo una vez) y DIBUJO (camara + FBO + lectura de pixeles,
  * repetible con otra camara sin releer el mundo). Solo lectura del mundo.
  */
@@ -90,16 +91,35 @@ public final class RenderPrueba {
     }
 
     /**
-     * Dibuja la geometria cacheada con la camara dada en un FBO de res x res y devuelve la imagen ARGB.
-     * Restaura el estado GL (matrices, framebuffer, banderas) al terminar o fallar.
+     * T-019: valida la resolucion y dibuja con supermuestreo x2 si la GPU lo admite (antialiasing de bordes sin MSAA).
+     * Si el FBO interno no se puede crear (memoria de video), repite a factor 1 y avisa en el chat.
+     * Devuelve siempre una imagen ARGB de exactamente res x res (RF-025).
      */
     private static BufferedImage dibujar(Minecraft mc, GeometriaCacheada geo, int[] reg, int res, ParametrosCamara cam) {
+        String err = ResolucionSalida.validar(res);
+        if (err != null) throw new IllegalArgumentException(err);
+        int factor = ResolucionSalida.factorSupermuestreo(res, FramebufferRender.maximoGpu());
+        if (factor == 1) chat(mc, "Aviso: tu GPU no admite supermuestreo a " + res + " px; los bordes saldrán sin suavizar.");
+        try {
+            return dibujar(mc, geo, reg, res, factor, cam);
+        } catch (IllegalStateException e) {
+            if (factor == 1) throw e;
+            chat(mc, "Aviso: no hay memoria de vídeo para el supermuestreo (" + e.getMessage() + ") Se repite sin suavizado de bordes.");
+            return dibujar(mc, geo, reg, res, 1, cam);
+        }
+    }
+
+    /**
+     * Dibuja la geometria cacheada con la camara dada en un FBO de (res*factor)^2, lo lee por franjas y lo reduce a res x res.
+     * Restaura el estado GL (matrices, framebuffer, banderas) al terminar o fallar.
+     */
+    private static BufferedImage dibujar(Minecraft mc, GeometriaCacheada geo, int[] reg, int res, int factor, ParametrosCamara cam) {
         FramebufferRender fbo = null;
         boolean mats = false;
         try {
             int nx = reg[3] - reg[0] + 1, ny = reg[4] - reg[1] + 1, nz = reg[5] - reg[2] + 1;
             // Render fuera de pantalla: aislar estado GL.
-            fbo = new FramebufferRender(res); // valida rango y límites de GPU; lanza con mensaje en español
+            fbo = new FramebufferRender(res * factor); // lado interno; valida límites de GPU; lanza con mensaje en español
             // Sin glPushAttrib/glPopAttrib: desincroniza la caché de GlStateManager. Se restaura a mano en finally.
             GlStateManager.matrixMode(GL11.GL_PROJECTION); GlStateManager.pushMatrix();
             GlStateManager.matrixMode(GL11.GL_MODELVIEW); GlStateManager.pushMatrix(); mats = true;
@@ -124,16 +144,17 @@ public final class RenderPrueba {
             // Orden: SOLID, CUTOUT_MIPPED, CUTOUT; alphaFunc GREATER 0.1 recorta cristal, hierba alta, antorchas.
             geo.dibujar(); // reproduce las display lists (sin releer el mundo)
 
-            // Lectura de pixeles del FBO (RGBA) y volcado a ARGB (se invierte el eje Y).
-            ByteBuffer px = fbo.leerPixeles();
-            BufferedImage img = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
-            for (int y = 0; y < res; y++) {
-                for (int x = 0; x < res; x++) {
-                    int i = ((res - 1 - y) * res + x) * 4;
-                    img.setRGB(x, y, (px.get(i + 3) & 255) << 24 | (px.get(i) & 255) << 16
-                            | (px.get(i + 1) & 255) << 8 | (px.get(i + 2) & 255));
-                }
+            // Lectura del FBO por franjas (RGBA, origen abajo-izquierda) y reduccion factor x factor con alfa
+            // premultiplicado: bordes suavizados y sin halo; fondo exactamente 0x00000000 (RF-011, RNF-004).
+            int interno = res * factor, franja = 128 * factor; // multiplo del factor
+            ByteBuffer buf = BufferUtils.createByteBuffer(interno * Math.min(franja, interno) * 4);
+            int[] argb = new int[res * res];
+            for (int y0 = 0; y0 < interno; y0 += franja) {
+                int filas = Math.min(franja, interno - y0);
+                fbo.leerFranja(buf, y0, filas);
+                ConversorImagen.reducirFranja(buf, interno, y0, filas, factor, argb);
             }
+            BufferedImage img = ConversorImagen.aImagen(argb, res);
             return img;
         } finally {
             // Restaurar siempre: matrices, atributos GL, framebuffer principal y su viewport.

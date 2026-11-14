@@ -116,7 +116,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
                 else {
                     String[] a = pruebaArg.trim().isEmpty() ? new String[0] : pruebaArg.trim().split("\\s+");
                     lado = ResolucionSalida.parsear(a.length > 0 ? a[0] : "");
-                    cam = ParametrosCamara.parsear(a.length > 1 ? java.util.Arrays.copyOfRange(a, 1, a.length) : a);
+                    cam = ParametrosCamara.parsear(a.length > 1 ? java.util.Arrays.copyOfRange(a, 1, a.length) : new String[0]);
                 }
             }
             catch (IllegalArgumentException e) { decir(mc, e.getMessage()); return; } // CA-025.2: sin archivo
