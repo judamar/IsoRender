@@ -4,10 +4,12 @@ package com.judamar.isorender.render;
 final class GeometriaRegion {
     private GeometriaRegion() { }
 
-    /** Capas dibujadas, en orden. TRANSLUCENT queda fuera (T-020). */
-    static final String[] ORDEN_CAPAS = {"SOLID", "CUTOUT_MIPPED", "CUTOUT"};
+    /** Capas dibujadas, en orden: TRANSLUCENT va la ultima (T-020). */
+    static final String[] ORDEN_CAPAS = {"SOLID", "CUTOUT_MIPPED", "CUTOUT", "TRANSLUCENT"};
+    /** Indice de la capa translucida (las anteriores son opacas o recortadas). */
+    static final int CAPA_TRANSLUCIDA = 3;
 
-    /** Indice de dibujo de la capa, o -1 si no se dibuja (translucida). */
+    /** Indice de dibujo de la capa, o -1 si no existe. */
     static int indiceCapa(String capa) {
         for (int i = 0; i < ORDEN_CAPAS.length; i++) if (ORDEN_CAPAS[i].equals(capa)) return i;
         return -1;

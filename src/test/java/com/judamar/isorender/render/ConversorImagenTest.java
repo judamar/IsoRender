@@ -5,10 +5,13 @@ import java.nio.ByteBuffer;
 import org.junit.Test;
 
 public class ConversorImagenTest {
-    /** Buffer RGBA GL (fila 0 = abajo) de lado x lado, con pixeles dados en orden fila a fila: {r,g,b,a}. */
+    /**
+     * Buffer RGBA GL (fila 0 = abajo) de lado x lado, con pixeles dados en orden fila a fila: {r,g,b,a} en alfa recto.
+     * Se premultiplican (como los deja el FBO); con alfa 0 el RGB queda en 0.
+     */
     private static ByteBuffer buf(int[][] px) {
         ByteBuffer b = ByteBuffer.allocate(px.length * 4);
-        for (int[] p : px) for (int c : p) b.put((byte) c);
+        for (int[] p : px) { for (int i = 0; i < 3; i++) b.put((byte) ((p[i] * p[3] + 127) / 255)); b.put((byte) p[3]); }
         b.flip();
         return b;
     }
@@ -29,8 +32,28 @@ public class ConversorImagenTest {
     }
 
     @Test public void transparenteNormalizaRgb() {
-        // RGB basura con alfa 0 no debe sobrevivir.
-        assertEquals(0, reducir(new int[][]{{200, 10, 90, 0}}, 1, 1)[0]);
+        // RGB residual con alfa 0 no debe sobrevivir.
+        ByteBuffer b = ByteBuffer.allocate(4);
+        b.put((byte) 200).put((byte) 10).put((byte) 90).put((byte) 0).flip();
+        int[] out = new int[1];
+        ConversorImagen.reducirFranja(b, 1, 0, 1, 1, out);
+        assertEquals(0, out[0]);
+    }
+
+    @Test public void cristalTenidoSobreFondoVacioConservaSuColor() {
+        // Translucido (alfa 140) sobre fondo transparente: el FBO guarda rgb*a; la imagen debe recuperar el color puro (CA-011.2).
+        int[] r = reducir(new int[][]{{40, 120, 220, 140}}, 1, 1);
+        assertEquals(140, r[0] >>> 24);
+        assertEquals(40, r[0] >> 16 & 255, 1);
+        assertEquals(120, r[0] >> 8 & 255, 1);
+        assertEquals(220, r[0] & 255, 1);
+    }
+
+    @Test public void alfaIntermedioEnMediaDeVecinos() {
+        // Mitad cristal (alfa 128) y mitad vacio: alfa intermedio, no opaco ni nulo.
+        int[] r = reducir(new int[][]{{0, 255, 0, 128}, {0, 0, 0, 0}, {0, 255, 0, 128}, {0, 0, 0, 0}}, 2, 2);
+        assertEquals(64, r[0] >>> 24);
+        assertEquals(255, r[0] >> 8 & 255);
     }
 
     @Test public void semitransparenteSeConserva() {

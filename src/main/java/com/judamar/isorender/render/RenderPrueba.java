@@ -27,7 +27,6 @@ public final class RenderPrueba {
     }
 
     private static void avisosGeometria(Minecraft mc, GeometriaCacheada geo) {
-        if (geo.translucidosOmitidos() > 0) chat(mc, geo.translucidosOmitidos() + " bloques translúcidos omitidos");
         if (geo.fallidos() > 0) chat(mc, geo.fallidos() + " bloques no se pudieron dibujar y se omitieron");
     }
 
@@ -91,7 +90,7 @@ public final class RenderPrueba {
     }
 
     /**
-     * T-019: valida la resolucion y dibuja con supermuestreo x2 si la GPU lo admite (antialiasing de bordes sin MSAA).
+     * T-019/T-020: valida la resolucion y dibuja con supermuestreo x2 si la GPU lo admite (antialiasing de bordes sin MSAA).
      * Si el FBO interno no se puede crear (memoria de video), repite a factor 1 y avisa en el chat.
      * Devuelve siempre una imagen ARGB de exactamente res x res (RF-025).
      */
@@ -110,7 +109,7 @@ public final class RenderPrueba {
     }
 
     /**
-     * Dibuja la geometria cacheada con la camara dada en un FBO de (res*factor)^2, lo lee por franjas y lo reduce a res x res.
+     * Dibuja la geometria cacheada con la camara dada en un FBO de (res*factor)^2, lo lee por franjas y lo reduce a res x res (el FBO es premultiplicado; ver ConversorImagen).
      * Restaura el estado GL (matrices, framebuffer, banderas) al terminar o fallar.
      */
     private static BufferedImage dibujar(Minecraft mc, GeometriaCacheada geo, int[] reg, int res, int factor, ParametrosCamara cam) {
@@ -141,8 +140,21 @@ public final class RenderPrueba {
             mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE); // atlas de bloques
             // Lightmap del mundo apagado: la luz es plena y fija (mismo PNG de dia y de noche); el AO sigue en el color de vertice.
             mc.entityRenderer.disableLightmap();
-            // Orden: SOLID, CUTOUT_MIPPED, CUTOUT; alphaFunc GREATER 0.1 recorta cristal, hierba alta, antorchas.
-            geo.dibujar(); // reproduce las display lists (sin releer el mundo)
+            // Pasada 1, opacas: SOLID, CUTOUT_MIPPED, CUTOUT; alphaFunc GREATER 0.1 recorta hierba alta, antorchas.
+            // El FBO guarda color PREMULTIPLICADO (rgb*a, a): sin mezcla (SRC_ALPHA, ZERO) para el color y alfa tal cual.
+            GlStateManager.enableBlend();
+            GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ZERO,
+                    GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+            geo.dibujarOpacas(); // reproduce las display lists (sin releer el mundo)
+            // Pasada 2, translucidas (cristal tintado, agua, hielo...): ultima, de atras hacia delante para esta camara.
+            // Test de profundidad ACTIVO (se ocultan tras los solidos) pero sin escribir profundidad (no se tapan entre si).
+            // Mezcla sobre destino premultiplicado: rgb = src*a + dst*(1-a); alfa = src + dst*(1-src), asi el alfa
+            // acumulado del PNG es correcto incluso sobre fondo transparente (RF-011, CA-011.2).
+            GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+                    GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+            GlStateManager.depthMask(false);
+            geo.dibujarTranslucidas(cam.rotacion, cam.elevacion);
+            GlStateManager.depthMask(true);
 
             // Lectura del FBO por franjas (RGBA, origen abajo-izquierda) y reduccion factor x factor con alfa
             // premultiplicado: bordes suavizados y sin halo; fondo exactamente 0x00000000 (RF-011, RNF-004).
@@ -171,6 +183,8 @@ public final class RenderPrueba {
                 GlStateManager.enableDepth();
                 GlStateManager.enableCull();
                 GlStateManager.disableBlend();
+                GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+                        GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO); // mezcla habitual de vanilla
                 GlStateManager.enableAlpha();
                 GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
                 GlStateManager.enableTexture2D();

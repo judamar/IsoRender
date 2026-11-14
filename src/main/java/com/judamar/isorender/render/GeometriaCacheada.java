@@ -24,6 +24,10 @@ import org.lwjgl.opengl.GL11;
  * memoria; no hay buffers GL que enlazar/desenlazar ni estado de clientes que restaurar. Un VBO por capa exigiria
  * configurar a mano cada atributo y dejar GL_ARRAY_BUFFER limpio. Si T-025 mide que no basta, se cambia aqui.
  *
+ * T-020: la capa TRANSLUCENT va aparte: se guardan sus caras crudas y su display list se recompila ordenada de atras
+ * hacia delante (OrdenTranslucido) solo cuando cambian rotacion o elevacion; zoom y desplazamiento no alteran el orden.
+ * Es lo barato aqui: ordenar N caras (N en miles) y volver a compilar una lista, sin releer el mundo.
+ *
  * Solo hilo de render. Usar con try/finally y close().
  */
 public final class GeometriaCacheada implements AutoCloseable {
@@ -31,6 +35,10 @@ public final class GeometriaCacheada implements AutoCloseable {
     private final ResumenGeometria resumen;
     private final int base; // primera display list; capa k = base + k
     private boolean cerrada;
+    // Capa translucida: caras crudas (null = no hay) y el BufferBuilder reutilizado para recompilar la lista ordenada.
+    private int[] datosT;
+    private BufferBuilder bufT;
+    private double rotT = Double.NaN, elevT = Double.NaN; // camara con la que se compilo la lista translucida
 
     private GeometriaCacheada(int[] region, ResumenGeometria resumen, int base) {
         this.region = region.clone(); this.resumen = resumen; this.base = base;
@@ -54,31 +62,38 @@ public final class GeometriaCacheada implements AutoCloseable {
             ((BlockLeaves) Blocks.LEAVES).setGraphicsLevel(true); ((BlockLeaves) Blocks.LEAVES2).setGraphicsLevel(true);
             int ini = GeometriaRegion.bytesIniciales(reg);
             BufferBuilder[] capas = new BufferBuilder[GeometriaRegion.ORDEN_CAPAS.length];
-            for (int i = 0; i < capas.length; i++) { capas[i] = new BufferBuilder(ini); capas[i].begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK); }
-            int dibujados = 0, translucidos = 0, fallidos = 0;
+            for (int i = 0; i < capas.length; i++) {
+                capas[i] = new BufferBuilder(i == GeometriaRegion.CAPA_TRANSLUCIDA ? Math.max(1 << 16, ini / 8) : ini);
+                capas[i].begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
+            }
+            int dibujados = 0, fallidos = 0;
             // getAllInBoxMutable reutiliza un solo BlockPos: sin objetos por bloque.
             for (BlockPos.MutableBlockPos p : BlockPos.getAllInBoxMutable(origen, new BlockPos(reg[3], reg[4], reg[5]))) {
                 if (!w.isBlockLoaded(p)) continue;
                 IBlockState s = w.getBlockState(p);
                 if (s.getMaterial() == Material.AIR) continue;
                 int k = GeometriaRegion.indiceCapa(s.getBlock().getBlockLayer().name());
-                if (k < 0) { translucidos++; continue; } // TRANSLUCENT: lo dibuja T-020
+                if (k < 0) continue; // capa desconocida (mod): se omite
                 try {
                     // renderBlock llama a getActualState (orientacion, conexiones, mitades) con la vista.
                     if (mc.getBlockRendererDispatcher().renderBlock(s, p, vista, capas[k])) dibujados++;
                 } catch (Throwable e) { fallidos++; } // bloque de mod u otro fallo: se omite (RN-010)
             }
+            // Caras translucidas crudas (antes de cerrar el buffer) para reordenarlas por camara.
+            BufferBuilder bt = capas[GeometriaRegion.CAPA_TRANSLUCIDA];
+            int[] crudoT = bt.getVertexCount() > 0 ? bt.getVertexState().getRawBuffer() : null;
             for (BufferBuilder b : capas) b.finishDrawing();
-            ResumenGeometria res = new ResumenGeometria(dibujados, translucidos, fallidos);
+            ResumenGeometria res = new ResumenGeometria(dibujados, fallidos);
             if (res.vacio()) throw new IllegalStateException(res.motivoVacio());
 
             // Subida: una display list por capa que reproduce el buffer (draw tambien lo resetea).
             base = GLAllocation.generateDisplayLists(capas.length);
-            for (int k = 0; k < capas.length; k++) {
+            for (int k = 0; k < GeometriaRegion.CAPA_TRANSLUCIDA; k++) { // las opacas; la translucida se compila al dibujar
                 GlStateManager.glNewList(base + k, GL11.GL_COMPILE);
                 try { new WorldVertexBufferUploader().draw(capas[k]); } finally { GlStateManager.glEndList(); }
             }
             GeometriaCacheada g = new GeometriaCacheada(reg, res, base);
+            g.datosT = crudoT; g.bufT = crudoT == null ? null : bt;
             ok = true;
             return g;
         } finally {
@@ -95,21 +110,37 @@ public final class GeometriaCacheada implements AutoCloseable {
     public boolean valida(int[] otraRegion) { return !cerrada && GeometriaRegion.misma(region, otraRegion); }
 
     public int bloques() { return resumen.bloques; }
-    public int translucidosOmitidos() { return resumen.translucidos; }
     public int fallidos() { return resumen.fallidos; }
 
-    /** Dibuja todas las capas en orden (SOLID, CUTOUT_MIPPED, CUTOUT). El llamador fija camara, textura y estado GL. */
-    public void dibujar() {
-        for (int k = 0; k < GeometriaRegion.ORDEN_CAPAS.length; k++) dibujar(k);
+    /** Dibuja las capas opacas y recortadas (SOLID, CUTOUT_MIPPED, CUTOUT). El llamador fija camara, textura y estado GL. */
+    public void dibujarOpacas() {
+        comprobarAbierta();
+        for (int k = 0; k < GeometriaRegion.CAPA_TRANSLUCIDA; k++) GlStateManager.callList(base + k); // sin releer el mundo
     }
 
-    /** Dibuja solo las capas indicadas (indices de GeometriaRegion.ORDEN_CAPAS), en el orden dado. */
-    public void dibujar(int... capas) {
-        if (cerrada) throw new IllegalStateException("la geometría ya fue liberada");
-        for (int k : capas) {
-            if (k < 0 || k >= GeometriaRegion.ORDEN_CAPAS.length) throw new IllegalArgumentException("capa inválida: " + k);
-            GlStateManager.callList(base + k); // reproduce la capa sin releer el mundo
+    /**
+     * Dibuja la capa translucida, de atras hacia delante para esa camara (rotacion y elevacion en grados; las mismas
+     * de CamaraGL). Debe ir DESPUES de dibujarOpacas, con blend activo y depthMask(false) (lo fija el llamador).
+     * Recompila la lista solo si la direccion de vista cambio desde la ultima vez.
+     */
+    public void dibujarTranslucidas(double rotacion, double elevacion) {
+        comprobarAbierta();
+        if (datosT == null) return;
+        if (rotacion != rotT || elevacion != elevT) {
+            // Reordena las caras y vuelve a compilar la lista (GL_COMPILE sobre un nombre ya usado la reemplaza).
+            int[] orden = OrdenTranslucido.ordenar(datosT, DefaultVertexFormats.BLOCK.getIntegerSize(), rotacion, elevacion);
+            bufT.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
+            bufT.addVertexData(orden);
+            bufT.finishDrawing();
+            GlStateManager.glNewList(base + GeometriaRegion.CAPA_TRANSLUCIDA, GL11.GL_COMPILE);
+            try { new WorldVertexBufferUploader().draw(bufT); } finally { GlStateManager.glEndList(); }
+            rotT = rotacion; elevT = elevacion;
         }
+        GlStateManager.callList(base + GeometriaRegion.CAPA_TRANSLUCIDA);
+    }
+
+    private void comprobarAbierta() {
+        if (cerrada) throw new IllegalStateException("la geometría ya fue liberada");
     }
 
     /** Libera las display lists. Idempotente. */
@@ -117,6 +148,7 @@ public final class GeometriaCacheada implements AutoCloseable {
     public void close() {
         if (cerrada) return;
         cerrada = true;
+        datosT = null; bufT = null;
         GLAllocation.deleteDisplayLists(base, GeometriaRegion.ORDEN_CAPAS.length);
     }
 }

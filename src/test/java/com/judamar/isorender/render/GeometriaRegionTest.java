@@ -21,7 +21,9 @@ public class GeometriaRegionTest {
         assertEquals(0, GeometriaRegion.indiceCapa("SOLID"));
         assertEquals(1, GeometriaRegion.indiceCapa("CUTOUT_MIPPED"));
         assertEquals(2, GeometriaRegion.indiceCapa("CUTOUT"));
-        assertEquals(-1, GeometriaRegion.indiceCapa("TRANSLUCENT"));
+        assertEquals(3, GeometriaRegion.indiceCapa("TRANSLUCENT"));
+        assertEquals(GeometriaRegion.CAPA_TRANSLUCIDA, GeometriaRegion.ORDEN_CAPAS.length - 1);
+        assertEquals(-1, GeometriaRegion.indiceCapa("INVENTADA"));
     }
     @Test public void tamanoInicialAcotado() {
         assertEquals(300 * 64, GeometriaRegion.bytesIniciales(r));
@@ -44,12 +46,11 @@ public class GeometriaRegionTest {
         }
     }
     @Test public void contadores() {
-        ResumenGeometria v = new ResumenGeometria(0, 0, 0);
+        ResumenGeometria v = new ResumenGeometria(0, 0);
         assertTrue(v.vacio());
         assertEquals("la región solo contiene aire", v.motivoVacio());
-        assertTrue(new ResumenGeometria(0, 3, 0).motivoVacio().contains("translúcidos"));
-        ResumenGeometria g = new ResumenGeometria(10, 2, 1);
+        ResumenGeometria g = new ResumenGeometria(10, 1);
         assertFalse(g.vacio());
-        assertEquals(10, g.bloques); assertEquals(2, g.translucidos); assertEquals(1, g.fallidos);
+        assertEquals(10, g.bloques); assertEquals(1, g.fallidos);
     }
 }
