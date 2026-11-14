@@ -8,6 +8,7 @@ import com.judamar.isorender.seleccion.Seleccion;
 import com.judamar.isorender.seleccion.Subcomando;
 import com.judamar.isorender.seleccion.ValidacionMundo;
 import com.mumfrey.liteloader.LiteMod;
+import com.judamar.isorender.render.ArgumentoItem;
 import com.judamar.isorender.render.Estres;
 import com.judamar.isorender.render.Fallos;
 import com.judamar.isorender.render.ParametrosCamara;
@@ -19,8 +20,13 @@ import com.mumfrey.liteloader.RenderListener;
 import com.mumfrey.liteloader.Tickable;
 import com.mumfrey.liteloader.core.LiteLoader;
 import java.io.File;
+import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.init.Blocks;
+import net.minecraft.init.Items;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
@@ -102,7 +108,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
             switch (sub) {
                 case MENU: abrirMenu = true; break;
                 case RENDER: renderMenu = true; break;
-                case PRUEBA: case PRUEBA_MULTI: case ESTRES:
+                case PRUEBA: case PRUEBA_MULTI: case ESTRES: case ITEM:
                     // T-022: un render a la vez; el segundo comando se rechaza en vez de pisar al primero.
                     if (pendiente != null || estres != null || RenderPrueba.ocupado()) {
                         decir(mc, com.judamar.isorender.render.Chat.OCUPADO);
@@ -112,7 +118,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
                 case CLEAR:
                     decir(mc, seleccion.limpiar() ? "Selección borrada." : "No había ninguna selección.");
                     break;
-                default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | render | prueba [lado 512-4096] [rotación 0-359] [elevación 5-90] [zoom 25-400] [vista iso|persp] | prueba-multi [n 2-8] | estres [n 1-50]");
+                default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | render | prueba [lado 512-4096] [rotación 0-359] [elevación 5-90] [zoom 25-400] [vista iso|persp] | prueba-multi [n 2-8] | estres [n 1-50] | item [id] [meta]");
             }
         } catch (Throwable e) {
             Fallos.informar(mc, "procesar el comando", e); // RNF-005
@@ -172,6 +178,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         pendiente = null;
         try {
             if (mc.world == null || mc.player == null) return;
+            if (sub == Subcomando.ITEM) { renderItem(mc); return; } // T-042: no usa region ni seleccion
             int lado = 0, n = 0;
             ParametrosCamara cam = null;
             // Argumentos invalidos: IllegalArgumentException con mensaje en español (CA-025.2: sin archivo)
@@ -189,6 +196,28 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         } catch (Throwable e) {
             Fallos.informar(mc, "preparar el render", e); // RNF-005: nunca cierra el juego ni vuelca la traza al chat
         }
+    }
+
+    /** T-042 (RF-030): item de la mano (la secundaria si la principal esta vacia) o item/bloque por ID y metadata. Solo lectura. */
+    private void renderItem(Minecraft mc) {
+        ArgumentoItem a = ArgumentoItem.parsear(pruebaArg); // IllegalArgumentException en español: lo informa onRender, sin archivo
+        ItemStack stack;
+        if (a.id == null) {
+            stack = mc.player.getHeldItemMainhand();
+            if (stack.isEmpty()) stack = mc.player.getHeldItemOffhand(); // [SUPUESTO]
+            if (stack.isEmpty()) { decir(mc, "No tienes ningún ítem en la mano."); return; }
+            stack = stack.copy(); // nunca se toca el del inventario
+        } else {
+            Item item = Item.getByNameOrId(a.id);
+            if (item == null || item == Items.AIR) {
+                Block b = Block.getBlockFromName(a.id);
+                decir(mc, b != null && b != Blocks.AIR ? "El bloque «" + a.id + "» no tiene forma de ítem y no se puede renderizar."
+                        : "No existe el ítem o bloque «" + a.id + "».");
+                return;
+            }
+            stack = new ItemStack(item, 1, a.meta);
+        }
+        RenderPrueba.exportarItem(mc, stack, camara.resolucion());
     }
 
     /** T-022: un paso del estres por frame; ante cualquier fallo inesperado se libera la guardia y se informa. */

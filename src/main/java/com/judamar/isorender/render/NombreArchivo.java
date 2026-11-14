@@ -19,6 +19,11 @@ public final class NombreArchivo {
                 + "_" + reg[3] + "," + reg[4] + "," + reg[5] + ".png";
     }
 
+    /** T-042 (RF-030): item_&lt;fecha-hora&gt;_&lt;registro&gt;_&lt;meta&gt;.png; ':' y todo lo que no sea letra, cifra, '_' o '-' pasa a '-'. */
+    public static String baseItem(LocalDateTime fechaHora, String registro, int meta) {
+        return "item_" + FECHA.format(fechaHora) + "_" + registro.replaceAll("[^A-Za-z0-9_-]", "-") + "_" + meta + ".png";
+    }
+
     /** Si {@code base} ya existe añade _2, _3... antes de «.png» hasta encontrar un nombre libre (CA-026.2). */
     public static String unico(String base, Predicate<String> existe) {
         if (!existe.test(base)) return base;

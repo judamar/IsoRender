@@ -12,7 +12,7 @@ Este plan lo ejecuta Claude Code. Reglas de uso:
 - Las tareas con 👁 tienen **puerta de verificación humana**: al terminar, Claude Code indica al solicitante qué comprobar en el juego y espera su aprobación antes de iniciar tareas que dependan de ella.
 - No se resuelven en silencio preguntas abiertas ni se amplía el alcance: se marca `[SUPUESTO]` o se pregunta (ERS §13).
 
-**Tareas con puerta de verificación humana 👁** (render visual, menú o carga en el juego): T-010, T-011, T-012, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-031, T-034, T-035, T-036, T-037, T-043, T-044 (opcionales E10).
+**Tareas con puerta de verificación humana 👁** (render visual, menú o carga en el juego): T-010, T-011, T-012, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-031, T-034, T-035, T-036, T-037, T-042, T-043, T-044 (opcionales E10).
 
 **Tareas verificables de forma autónoma** (build, pruebas unitarias, revisión de código): T-004 a T-009, T-013, T-015, T-028 a T-030, T-032, T-033, T-038 a T-041.
 
@@ -96,7 +96,7 @@ Responsables: Analista, Desarrollador (único desarrollador), Solicitante. Los t
 | T-044 | Entidades decorativas en el render (marcos de objetos, pinturas, armor stands) | RF-034 | T-021 | 8 | 14 | 26 | 15,0 |
 | | **Total opcional (sin buffer)** | | | **22** | **38** | **70** | **40,7** |
 
-T-043 (corte por altura) se implementó a petición del solicitante (2026-11-14) y lleva puerta 👁. Con 15 % de buffer: 46,8 h. T-044 (RF-034) la pidió el solicitante (2026-11-14) tras ver que el marco de objetos no aparece (fuera de la v1) y lleva puerta 👁. No está en el total general.
+T-042 (ítem en la mano o por ID) se implementó a petición del solicitante (2026-11-14) y lleva puerta 👁. T-043 (corte por altura) se implementó a petición del solicitante (2026-11-14) y lleva puerta 👁. Con 15 % de buffer: 46,8 h. T-044 (RF-034) la pidió el solicitante (2026-11-14) tras ver que el marco de objetos no aparece (fuera de la v1) y lleva puerta 👁. No está en el total general.
 
 # 3. Estimación
 

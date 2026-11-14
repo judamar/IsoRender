@@ -65,7 +65,7 @@ Versión v0.4 (adaptada para ejecución con Claude Code). Basado en la ERS v0.3.
 
 ## 3.3 Opcionales y fase 2
 
-- Render de ítem en la mano o de ítem y bloque por ID (RF-030), del brief original; se estima aparte.
+- Render de ítem en la mano o de ítem y bloque por ID (RF-030), del brief original: opcional **implementado** (T-042, petición del solicitante, 2026-11-14).
 
 - Corte por altura de la estructura (RF-015): opcional **implementado** (T-043, petición del solicitante, 2026-11-14).
 
@@ -190,7 +190,7 @@ Prioridades: 19 Must, 9 Should, 2 Could y 1 Won't. Resumen:
 | RF-027 | Resultado del render en el chat | Must | EP-5 |
 | RF-028 | Lectura del archivo de configuración | Should | EP-6 |
 | RF-029 | Guardado de configuración y último ajuste | Should | EP-6 |
-| RF-030 | Render de ítem o bloque individual | Could | EP-7 |
+| RF-030 | Render de ítem o bloque individual | Could (implementado, T-042) | EP-7 |
 | RF-031 | Render en lote | Won't | EP-7 |
 | RF-032 | Fondo de la vista previa | Could | EP-4 |
 | RF-033 | Vista isométrica o en perspectiva | Should | EP-4 |
@@ -756,7 +756,15 @@ Prioridades: 19 Must, 9 Should, 2 Could y 1 Won't. Resumen:
 
 - **CA-030.2 (validación/error):** **Dado** un ID inexistente, **cuando** ejecuta el comando, **entonces** el chat informa el error y no se genera archivo.
 
-**Notas / dudas:** Conflicto CF-01: el brief original pedía esto; el nuevo enfoque lo hace secundario. Se estima aparte.
+- **CA-030.3 (validación/error):** **Dado** que ambas manos están vacías, **cuando** ejecuta /isorender item sin argumentos, **entonces** el chat informa «No tienes ningún ítem en la mano.» y no se genera archivo.
+
+**Notas / dudas:** Conflicto CF-01: el brief original pedía esto; el nuevo enfoque lo hace secundario. Implementado en T-042 (P-15).
+
+- Comandos: `/isorender item` (ítem de la mano principal) y `/isorender item <id> [meta]` (p. ej. `minecraft:wool 14`, `stone`). No requieren selección ni menú.
+- *\[SUPUESTO\]* Si la mano principal está vacía se usa la secundaria.
+- *\[SUPUESTO\]* «Bloque por ID» es su forma de ítem (el modelo del inventario, ya isométrico); un bloque sin ítem (agua, fuego) da un error claro.
+- *\[SUPUESTO\]* La cámara del menú no se aplica: el ítem sale como en el inventario. La resolución sí es la del menú o la configuración.
+- Salida: `item_<fecha-hora>_<registro>_<meta>.png` en la carpeta de salida, fondo transparente.
 
 ### RF-031: Render en lote
 
@@ -1041,7 +1049,7 @@ El mod no usa base de datos. Las entidades de trabajo son:
 
 | **Interfaz** | **Especificación *\[SUPUESTO\]* salvo lo indicado** |
 |---|---|
-| Comandos | /isorender pos1 · /isorender pos2 · /isorender clear · /isorender menu · /isorender render \[resolución\] |
+| Comandos | /isorender pos1 · /isorender pos2 · /isorender clear · /isorender menu · /isorender render \[resolución\] · /isorender item \[id\] \[meta\] |
 | Tecla | «K» abre el menú; reasignable en los controles de Minecraft. |
 | Menú | Vista previa; deslizadores y campos de rotación, elevación, zoom y desplazamiento; selector de resolución; botones Renderizar, Restablecer y presets; estado de la selección (coordenadas y dimensiones). |
 | Configuración | Archivo en el directorio de configuración de LiteLoader: carpetaSalida, resolución (1024), rotación (45), elevación (35,264), zoom (100 %), margen (5 %), tamañoMáximo (64). |
@@ -1085,7 +1093,7 @@ El mod no usa base de datos. Las entidades de trabajo son:
 | P-12 | ¿La vista previa debe ser en tiempo real o basta con un botón «Actualizar»? | No bloqueante | RF-019, RNF-003 | Tiempo real, con modo simplificado en regiones grandes. |
 | P-13 | ¿Qué otros ajustes debe tener el menú además de cámara y ángulo (iluminación, margen, recorte de la imagen, fondo)? | No bloqueante | RF-017 a RF-023 | Rotación, elevación, zoom, desplazamiento y resolución. |
 | P-14 | ¿Qué formato de imagen se prefiere: cuadrada o recortada a la silueta? | No bloqueante | RF-025, RN-006 | Cuadrada. |
-| P-15 | ¿Se necesita el render de ítem o bloque individual del brief original? | No bloqueante | RF-030 | Opcional (Could). |
+| P-15 | ¿Se necesita el render de ítem o bloque individual del brief original? | No bloqueante | RF-030 | Sí, T-042 (solicitante, 2026-11-14). |
 | P-16 | ¿Cuál es el equipo de referencia para medir el rendimiento? | No bloqueante | RNF-002, RNF-003 | GPU dedicada de 4 GB, 16 GB de RAM. |
 
 ## 13.2 Conflictos detectados

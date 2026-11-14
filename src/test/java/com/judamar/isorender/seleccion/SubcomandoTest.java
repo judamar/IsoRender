@@ -20,4 +20,11 @@ public class SubcomandoTest {
         assertEquals(Subcomando.RENDER, Subcomando.parsear("/isorender render"));
         assertEquals(Subcomando.USO, Subcomando.parsear("/isorender render 2048"));
     }
+    @Test public void item() {
+        assertEquals(Subcomando.ITEM, Subcomando.parsear("/isorender item"));
+        assertEquals(Subcomando.ITEM, Subcomando.parsear("/isorender item stone 1"));
+        assertEquals("stone 1", Subcomando.argumento("/isorender item stone 1"));
+        assertEquals("", Subcomando.argumento("/isorender item"));
+        assertEquals(Subcomando.USO, Subcomando.parsear("/isorender pos1 x"));
+    }
 }

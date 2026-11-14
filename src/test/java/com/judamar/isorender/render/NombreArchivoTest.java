@@ -20,6 +20,13 @@ public class NombreArchivoTest {
         assertEquals("estructura_20261114-090507_10,64,20_25,80,35.png", NombreArchivo.base(T, new int[]{10, 64, 20, 25, 80, 35}));
     }
 
+    @Test public void itemNombre() {
+        assertEquals("item_20261114-090507_minecraft-stone_0.png", NombreArchivo.baseItem(T, "minecraft:stone", 0));
+        assertEquals("item_20261114-090507_mod-a-b_14.png", NombreArchivo.baseItem(T, "mod:a/b", 14));
+        assertEquals("item_20261114-090507_minecraft-stone_0_2.png",
+                NombreArchivo.unico(NombreArchivo.baseItem(T, "minecraft:stone", 0), n -> n.equals("item_20261114-090507_minecraft-stone_0.png")));
+    }
+
     @Test public void coordenadasNegativasSonValidas() {
         String n = NombreArchivo.base(T, new int[]{-10, -5, -20, 3, 0, -1});
         assertEquals("estructura_20261114-090507_-10,-5,-20_3,0,-1.png", n);

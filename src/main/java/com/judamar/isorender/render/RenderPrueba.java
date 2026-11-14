@@ -10,7 +10,14 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.block.model.IBakedModel;
+import net.minecraft.client.renderer.block.model.ItemCameraTransforms;
+import net.minecraft.client.renderer.texture.ITextureObject;
 import net.minecraft.client.renderer.texture.TextureMap;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 
@@ -85,6 +92,74 @@ public final class RenderPrueba {
                 NombreArchivo.unico(NombreArchivo.base(LocalDateTime.now(), reg), n -> new File(dir, n).exists())));
     }
 
+    /**
+     * T-042 (RF-030): PNG de un item (o bloque en su forma de item) tal como se ve en el inventario, a la resolucion dada.
+     * Misma guardia, FBO, supermuestreo y restauracion de estado que la region. Debe llamarse desde el hilo de render. Nunca lanza.
+     */
+    public static void exportarItem(Minecraft mc, ItemStack stack, int res) {
+        if (!GUARDIA.entrar()) { chat(mc, Chat.OCUPADO); return; }
+        try {
+            long t0 = System.currentTimeMillis();
+            BufferedImage img = aImagen(mc, res, s -> chat(mc, s), () -> escenaItem(mc, stack));
+            File dir = carpetaSalida(mc);
+            String base = NombreArchivo.baseItem(LocalDateTime.now(), String.valueOf(Item.REGISTRY.getNameForObject(stack.getItem())), stack.getMetadata());
+            File out = new File(dir, NombreArchivo.unico(base, n -> new File(dir, n).exists()));
+            guardar(img, out);
+            Chat.archivo(mc, "Ítem listo " + res + "x" + res + " px en ", out, " [" + (System.currentTimeMillis() - t0) + " ms]");
+        } catch (Throwable e) {
+            Fallos.informar(mc, "renderizar el ítem", e);
+        } finally {
+            GUARDIA.salir();
+        }
+    }
+
+    /**
+     * T-042: dibuja el item como vanilla lo dibuja en un hueco del inventario (RenderItem.renderItemModelIntoGUI/setupGuiTransform),
+     * centrado en el origen y con ancho 1 unidad. La GUI tiene la Y hacia abajo (proyeccion invertida + scale(1,-1,1)); se replica
+     * tal cual para que la luz de objeto de la GUI caiga igual que en el inventario. Ignora la camara del menu.
+     */
+    private static void escenaItem(Minecraft mc, ItemStack s) {
+        double r = 0.5 / (1 - ParametrosCamara.MARGEN); // mismo margen que el encuadre de la region
+        GlStateManager.matrixMode(GL11.GL_PROJECTION);
+        GlStateManager.loadIdentity();
+        GlStateManager.ortho(-r, r, r, -r, -10, 10); // bottom > top: Y hacia abajo, como la GUI
+        GlStateManager.matrixMode(GL11.GL_MODELVIEW);
+        GlStateManager.loadIdentity();
+
+        GlStateManager.enableDepth();
+        GlStateManager.depthFunc(GL11.GL_LEQUAL);
+        GlStateManager.depthMask(true);
+        GlStateManager.disableCull();
+        GlStateManager.enableAlpha();
+        GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
+        GlStateManager.enableTexture2D();
+        GlStateManager.color(1, 1, 1, 1);
+        // FBO premultiplicado: el alfa acumulado tambien se mezcla (ONE, ONE_MINUS_SRC_ALPHA) para que el borde translucido sea correcto.
+        GlStateManager.enableBlend();
+        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+                GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+        GlStateManager.enableRescaleNormal();
+        mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+        ITextureObject atlas = mc.getTextureManager().getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+        atlas.setBlurMipmap(false, false); // pixeles nitidos, como en el inventario; se restaura abajo
+        mc.entityRenderer.disableLightmap();
+        try {
+            IBakedModel m = mc.getRenderItem().getItemModelWithOverrides(s, null, null);
+            // La luz se fija ANTES de voltear la Y (como vanilla: luces con la matriz de la GUI, despues el hueco).
+            RenderHelper.enableGUIStandardItemLighting();
+            if (!m.isGui3d()) GlStateManager.disableLighting(); // item plano: sin sombreado
+            GlStateManager.pushMatrix();
+            GlStateManager.scale(1, -1, 1);
+            m.getItemCameraTransforms().applyTransform(ItemCameraTransforms.TransformType.GUI);
+            mc.getRenderItem().renderItem(s, m); // modelo normal, renderer especial (cofre, cabeza, estandarte, escudo) y brillo de encantamiento
+            GlStateManager.popMatrix();
+        } finally {
+            try { Tessellator.getInstance().getBuffer().finishDrawing(); } catch (IllegalStateException ignorado) { } // si un renderer fallo a medias
+            RenderHelper.disableStandardItemLighting();
+            atlas.restoreLastBlurMipmap();
+        }
+    }
+
     /** Flujo comun: guardia, construccion, dibujo, avisos, guardado y mensaje. {@code destino} decide el File (tras dibujar). */
     private static void render(Minecraft mc, int[] reg, int res, ParametrosCamara cam, String exito, String contexto, Supplier<File> destino) {
         if (!GUARDIA.entrar()) { chat(mc, Chat.OCUPADO); return; }
@@ -154,13 +229,19 @@ public final class RenderPrueba {
         }
     }
 
-    /**
-     * T-019/T-020/T-022: valida la resolucion y dibuja con supermuestreo x2 si la GPU y la memoria lo admiten
-     * (antialiasing de bordes sin MSAA). Si el FBO interno no se puede crear o falta memoria, repite a factor 1 y avisa.
-     * Devuelve siempre una imagen ARGB de exactamente res x res (RF-025).
-     */
+    /** Region: dibuja la geometria cacheada con la camara dada (la escena es dibujarEscena con entidades). */
     private static BufferedImage dibujar(Minecraft mc, GeometriaCacheada geo, int[] reg, int res, ParametrosCamara cam,
                                          Consumer<String> aviso) {
+        return aImagen(mc, res, aviso, () -> dibujarEscena(mc, geo, reg, cam, true, true));
+    }
+
+    /**
+     * T-019/T-020/T-022/T-042: valida la resolucion y dibuja {@code escena} con supermuestreo x2 si la GPU y la memoria lo admiten
+     * (antialiasing de bordes sin MSAA). Si el FBO interno no se puede crear o falta memoria, repite a factor 1 y avisa.
+     * Devuelve siempre una imagen ARGB de exactamente res x res (RF-025). La escena se dibuja con el FBO ya enlazado y limpio
+     * y puede ejecutarse dos veces (reintento): no debe tener efectos fuera de OpenGL.
+     */
+    private static BufferedImage aImagen(Minecraft mc, int res, Consumer<String> aviso, Runnable escena) {
         String err = ResolucionSalida.validar(res);
         if (err != null) throw new IllegalArgumentException(err);
         int factor = ResolucionSalida.factorSupermuestreo(res, FramebufferRender.maximoGpu());
@@ -169,12 +250,12 @@ public final class RenderPrueba {
         if (seguro < factor) aviso.accept("Aviso: poca memoria para el supermuestreo a " + res + " px; se dibuja sin suavizado de bordes.");
         factor = seguro;
         try {
-            return dibujar(mc, geo, reg, res, factor, cam, aviso);
+            return aImagen(mc, res, factor, aviso, escena);
         } catch (IllegalStateException | OutOfMemoryError e) {
             if (factor == 1) throw e;
             String causa = e instanceof OutOfMemoryError ? "memoria insuficiente" : e.getMessage();
             aviso.accept("Aviso: no hay memoria para el supermuestreo (" + causa + ") Se repite sin suavizado de bordes.");
-            return dibujar(mc, geo, reg, res, 1, cam, aviso);
+            return aImagen(mc, res, 1, aviso, escena);
         }
     }
 
@@ -236,11 +317,10 @@ public final class RenderPrueba {
     }
 
     /**
-     * Dibuja la geometria cacheada con la camara dada en un FBO de (res*factor)^2, lo lee por franjas y lo reduce a res x res (el FBO es premultiplicado; ver ConversorImagen).
+     * Dibuja la escena en un FBO de (res*factor)^2, lo lee por franjas y lo reduce a res x res (el FBO es premultiplicado; ver ConversorImagen).
      * Restaura SIEMPRE el estado GL previo (EstadoGrafico) y libera el FBO, tambien si falla; avisa si queda un error GL.
      */
-    private static BufferedImage dibujar(Minecraft mc, GeometriaCacheada geo, int[] reg, int res, int factor, ParametrosCamara cam,
-                                         Consumer<String> aviso) {
+    private static BufferedImage aImagen(Minecraft mc, int res, int factor, Consumer<String> aviso, Runnable escena) {
         // Captura ANTES de tocar nada: framebuffer, viewport, matrices, banderas, unidades de textura...
         EstadoGrafico previo = EstadoGrafico.capturarCompleto(mc);
         FramebufferRender fbo = null;
@@ -250,7 +330,7 @@ public final class RenderPrueba {
 
             fbo.enlazarYLimpiar(); // viewport res x res; limpia con alfa 0 y profundidad
 
-            dibujarEscena(mc, geo, reg, cam, true, true);
+            escena.run();
 
             // Lectura del FBO por franjas (RGBA, origen abajo-izquierda) y reduccion factor x factor con alfa
             // premultiplicado: bordes suavizados y sin halo; fondo exactamente 0x00000000 (RF-011, RNF-004).
