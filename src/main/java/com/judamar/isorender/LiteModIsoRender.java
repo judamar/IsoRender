@@ -1,6 +1,6 @@
 package com.judamar.isorender;
 
-import com.judamar.isorender.menu.PantallaPrueba;
+import com.judamar.isorender.menu.PantallaMenu;
 import com.judamar.isorender.seleccion.Seleccion;
 import com.judamar.isorender.seleccion.Subcomando;
 import com.judamar.isorender.seleccion.ValidacionMundo;
@@ -25,7 +25,7 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.text.TextComponentString;
 import org.lwjgl.input.Keyboard;
 
-/** Clase de entrada. T-009: saludo en el chat. T-010: tecla K y /isorender menu abren una pantalla de prueba. */
+/** Clase de entrada. T-009: saludo en el chat. T-010/T-023: tecla K y /isorender menu abren el menú. */
 public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, RenderListener, PostRenderListener {
     private final com.judamar.isorender.render.ContornoSeleccion contorno = new com.judamar.isorender.render.ContornoSeleccion();
     private final KeyBinding teclaMenu = new KeyBinding("Abrir menú IsoRender", Keyboard.KEY_K, "IsoRender");
@@ -60,7 +60,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         boolean abrir = (tecla || abrirMenu) && mc.currentScreen == null;
         abrirMenu = false;
         if (abrir) {
-            try { mc.displayGuiScreen(new PantallaPrueba()); }
+            try { mc.displayGuiScreen(new PantallaMenu(seleccion)); }
             catch (Throwable e) { Fallos.informar(mc, "abrir el menú", e); } // RNF-005: un fallo del menu no cierra el juego
         }
     }
