@@ -131,7 +131,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
             }
             String error = ValidacionMundo.validar(seleccion, mc.world, ValidacionRegion.MAX);
             if (error != null) { decir(mc, error); return; }
-            RenderPrueba.ejecutar(mc, seleccion.region(), camara.resolucion(), camara.actual());
+            RenderPrueba.exportar(mc, seleccion.region(), camara.resolucion(), camara.actual());
         } catch (Throwable e) {
             Fallos.informar(mc, "preparar el render", e); // RNF-005
         }

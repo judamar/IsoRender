@@ -4,8 +4,9 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.LocalDateTime;
 import java.util.function.Consumer;
-import javax.imageio.ImageIO;
+import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.texture.TextureMap;
@@ -49,15 +50,7 @@ public final class RenderPrueba {
         if (e.avisoFallidas() != null) chat(mc, "Aviso: " + e.avisoFallidas());
     }
 
-    private static void guardar(BufferedImage img, File out) throws IOException {
-        out.getParentFile().mkdirs();
-        try {
-            if (!ImageIO.write(img, "png", out)) throw new IOException("no hay codificador PNG");
-        } catch (IOException | RuntimeException e) {
-            out.delete(); // no dejar un PNG a medias
-            throw e;
-        }
-    }
+    private static void guardar(BufferedImage img, File out) throws IOException { ConversorImagen.guardarPng(img, out); }
 
     /**
      * T-022 (RNF-014): lee la geometria solo si la memoria alcanza (con un GC previo si no); si no, rechaza con mensaje
@@ -74,8 +67,25 @@ public final class RenderPrueba {
         return GeometriaCacheada.construir(mc, reg);
     }
 
-    /** Debe llamarse desde el hilo de render (RenderListener.onRender). Nunca lanza. */
+    /** T-028 [SUPUESTO]: carpeta de exportacion por defecto; T-029 la leera de la configuracion. Unico punto a cambiar. */
+    static File carpetaSalida(Minecraft mc) { return new File(mc.mcDataDir, "isorender"); }
+
+    /** Prueba (/isorender prueba): PNG en isorender-test con el nombre de siempre. Debe llamarse desde el hilo de render. Nunca lanza. */
     public static void ejecutar(Minecraft mc, int[] reg, int res, ParametrosCamara cam) {
+        File dir = new File(mc.mcDataDir, "isorender-test");
+        render(mc, reg, res, cam, "Prueba lista", "renderizar la prueba",
+                () -> new File(dir, "prueba-" + res + "-" + System.currentTimeMillis() + ".png"));
+    }
+
+    /** T-028 (RF-024/RF-026): exportacion real a carpetaSalida con nombre unico estructura_<fecha>_<coords>.png. */
+    public static void exportar(Minecraft mc, int[] reg, int res, ParametrosCamara cam) {
+        File dir = carpetaSalida(mc);
+        render(mc, reg, res, cam, "Render listo", "exportar el render", () -> new File(dir,
+                NombreArchivo.unico(NombreArchivo.base(LocalDateTime.now(), reg), n -> new File(dir, n).exists())));
+    }
+
+    /** Flujo comun: guardia, construccion, dibujo, avisos, guardado y mensaje. {@code destino} decide el File (tras dibujar). */
+    private static void render(Minecraft mc, int[] reg, int res, ParametrosCamara cam, String exito, String contexto, Supplier<File> destino) {
         if (!GUARDIA.entrar()) { chat(mc, "Ya hay un render en curso; espera a que termine."); return; }
         try {
             long t0 = System.currentTimeMillis();
@@ -85,13 +95,13 @@ public final class RenderPrueba {
                 // (b) Dibujo con la camara dada.
                 BufferedImage img = dibujar(mc, geo, reg, res, cam, s -> chat(mc, s));
                 avisosEntidades(mc, geo.ultimasEntidades());
-                File out = new File(new File(mc.mcDataDir, "isorender-test"), "prueba-" + res + "-" + System.currentTimeMillis() + ".png");
+                File out = destino.get();
                 guardar(img, out);
-                chat(mc, "Prueba lista " + res + "x" + res + " px (" + geo.bloques() + " bloques) en " + out.getPath()
+                chat(mc, exito + " " + res + "x" + res + " px (" + geo.bloques() + " bloques) en " + out.getAbsolutePath()
                         + " [" + (System.currentTimeMillis() - t0) + " ms]");
             }
         } catch (Throwable e) {
-            Fallos.informar(mc, "renderizar la prueba", e);
+            Fallos.informar(mc, contexto, e);
         } finally {
             GUARDIA.salir();
         }

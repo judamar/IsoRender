@@ -1,6 +1,9 @@
 package com.judamar.isorender.render;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
 import java.nio.ByteBuffer;
 
 /**
@@ -52,5 +55,17 @@ public final class ConversorImagen {
         BufferedImage img = new BufferedImage(lado, lado, BufferedImage.TYPE_INT_ARGB);
         img.setRGB(0, 0, lado, lado, argb, 0, lado);
         return img;
+    }
+
+    /** T-028 (CA-024.2): crea la carpeta si falta y escribe el PNG; ante cualquier fallo no deja un archivo a medias. */
+    public static void guardarPng(BufferedImage img, File out) throws IOException {
+        File dir = out.getAbsoluteFile().getParentFile();
+        if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) throw new IOException("no se pudo crear la carpeta " + dir.getPath());
+        try {
+            if (!ImageIO.write(img, "png", out)) throw new IOException("no hay codificador PNG");
+        } catch (IOException | RuntimeException e) {
+            out.delete(); // no dejar un PNG a medias
+            throw e;
+        }
     }
 }
