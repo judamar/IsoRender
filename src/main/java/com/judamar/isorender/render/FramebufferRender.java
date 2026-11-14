@@ -1,6 +1,7 @@
 package com.judamar.isorender.render;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.shader.Framebuffer;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
@@ -41,8 +42,16 @@ public final class FramebufferRender implements AutoCloseable {
     /** Enlaza el FBO (fija el viewport a lado x lado) y lo limpia a transparente (alfa 0) con profundidad. */
     public void enlazarYLimpiar() {
         fbo.bindFramebuffer(true);
+        // glClear respeta colorMask, depthMask y scissor: el estado heredado del juego puede impedir que el
+        // clear borre el color (fondo opaco y restos de renders anteriores en memoria de VRAM reutilizada).
+        GlStateManager.colorMask(true, true, true, true);
+        GlStateManager.depthMask(true);
+        GL11.glDisable(GL11.GL_SCISSOR_TEST);
         fbo.setFramebufferColor(0, 0, 0, 0);
         fbo.framebufferClear();
+        // framebufferClear() de MC 1.12.2 termina con unbindFramebuffer(): hay que reenlazar o se dibuja
+        // (y se lee) en el framebuffer principal de la ventana. bindFramebuffer(true) tambien fija el viewport.
+        fbo.bindFramebuffer(true);
     }
 
     /** Lee los píxeles RGBA (origen abajo-izquierda) del FBO enlazado. */

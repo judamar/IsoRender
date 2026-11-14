@@ -33,6 +33,8 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
     private volatile boolean abrirMenu;
     /** T-011: la prueba de render se ejecuta en el siguiente frame, dentro de onRender. */
     private volatile boolean pruebaPendiente;
+    /** T-018: prueba de geometria reutilizada (n imagenes con una sola construccion). */
+    private volatile boolean multiPendiente;
     private volatile String pruebaArg = "";
 
     @Override public String getName() { return "IsoRender"; }
@@ -66,11 +68,12 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         switch (sub) {
             case MENU: abrirMenu = true; break;
             case PRUEBA: pruebaArg = Subcomando.argumento(message); pruebaPendiente = true; break;
+            case PRUEBA_MULTI: pruebaArg = Subcomando.argumento(message); multiPendiente = true; break;
             case POS1: case POS2: fijarPunto(mc, sub == Subcomando.POS1); break;
             case CLEAR:
                 decir(mc, seleccion.limpiar() ? "Selección borrada." : "No había ninguna selección.");
                 break;
-            default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | prueba [lado 512-4096] [rotación 0-359] [elevación 5-90] [zoom 25-400]");
+            default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | prueba [lado 512-4096] [rotación 0-359] [elevación 5-90] [zoom 25-400] | prueba-multi [n 2-8]");
         }
         return false;
     }
@@ -100,23 +103,28 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
 
     @Override
     public void onRender() {
-        if (!pruebaPendiente) return;
-        pruebaPendiente = false;
+        if (!pruebaPendiente && !multiPendiente) return;
+        boolean multi = multiPendiente;
+        pruebaPendiente = false; multiPendiente = false;
         Minecraft mc = Minecraft.getMinecraft();
         try {
             if (mc.world == null || mc.player == null) return;
-            int lado;
-            ParametrosCamara cam;
+            int lado = 0, n = 0;
+            ParametrosCamara cam = null;
             try {
-                String[] a = pruebaArg.trim().isEmpty() ? new String[0] : pruebaArg.trim().split("\\s+");
-                lado = ResolucionSalida.parsear(a.length > 0 ? a[0] : "");
-                cam = ParametrosCamara.parsear(a.length > 1 ? java.util.Arrays.copyOfRange(a, 1, a.length) : a);
+                if (multi) n = RenderPrueba.parsearN(pruebaArg);
+                else {
+                    String[] a = pruebaArg.trim().isEmpty() ? new String[0] : pruebaArg.trim().split("\\s+");
+                    lado = ResolucionSalida.parsear(a.length > 0 ? a[0] : "");
+                    cam = ParametrosCamara.parsear(a.length > 1 ? java.util.Arrays.copyOfRange(a, 1, a.length) : a);
+                }
             }
             catch (IllegalArgumentException e) { decir(mc, e.getMessage()); return; } // CA-025.2: sin archivo
             // Punto reutilizable para el futuro /isorender render: validar y luego renderizar la región.
             String error = ValidacionMundo.validar(seleccion, mc.world, ValidacionRegion.MAX);
             if (error != null) { decir(mc, error); return; }
-            RenderPrueba.ejecutar(mc, seleccion.region(), lado, cam);
+            if (multi) RenderPrueba.ejecutarMulti(mc, seleccion.region(), n);
+            else RenderPrueba.ejecutar(mc, seleccion.region(), lado, cam);
         } catch (Throwable e) {
             decir(mc, "Error al validar la región: " + e);
             e.printStackTrace();

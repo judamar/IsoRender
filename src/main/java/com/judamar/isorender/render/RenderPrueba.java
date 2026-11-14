@@ -4,75 +4,101 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.nio.ByteBuffer;
 import javax.imageio.ImageIO;
-import net.minecraft.block.BlockLeaves;
-import net.minecraft.init.Blocks;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.renderer.WorldVertexBufferUploader;
 import net.minecraft.client.renderer.texture.TextureMap;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
-import net.minecraft.world.World;
 import org.lwjgl.opengl.GL11;
 
-/** T-011 (prototipo): render isometrico 8x8x8 a FBO propio y PNG con alfa. Solo lectura del mundo. */
+/**
+ * T-011 (prototipo) / T-018: render isometrico a FBO propio y PNG con alfa. Dos fases separadas:
+ * CONSTRUCCION de geometria (GeometriaCacheada, lee el mundo una vez) y DIBUJO (camara + FBO + lectura de pixeles,
+ * repetible con otra camara sin releer el mundo). Solo lectura del mundo.
+ */
 public final class RenderPrueba {
     private RenderPrueba() { }
 
-    /** Estado actual de la hoja (fancy o no); leavesFancy es protegido y no tiene getter. */
-    private static boolean hoja(net.minecraft.block.Block b) { return !b.isOpaqueCube(b.getDefaultState()); }
+    /** Argumento de "/isorender prueba-multi [n]": entero 2-8; vacío = 4. Lanza IllegalArgumentException en español. */
+    public static int parsearN(String arg) { return GeometriaRegion.parsearN(arg); }
 
     private static void chat(Minecraft mc, String s) {
         if (mc.player != null) mc.player.sendMessage(new TextComponentString("[IsoRender] " + s));
     }
 
+    private static void avisosGeometria(Minecraft mc, GeometriaCacheada geo) {
+        if (geo.translucidosOmitidos() > 0) chat(mc, geo.translucidosOmitidos() + " bloques translúcidos omitidos");
+        if (geo.fallidos() > 0) chat(mc, geo.fallidos() + " bloques no se pudieron dibujar y se omitieron");
+    }
+
+    private static void errorAlChat(Minecraft mc, Throwable e) {
+        if (e instanceof OutOfMemoryError) chat(mc, "Memoria insuficiente para dibujar la región; usa una región más pequeña o menos resolución.");
+        else { chat(mc, "Error en la prueba de render: " + e); e.printStackTrace(); }
+    }
+
+    private static void guardar(BufferedImage img, File out) throws java.io.IOException {
+        out.getParentFile().mkdirs();
+        ImageIO.write(img, "png", out);
+    }
+
     /** Debe llamarse desde el hilo de render (RenderListener.onRender). Nunca lanza. */
     public static void ejecutar(Minecraft mc, int[] reg, int res, ParametrosCamara cam) {
         long t0 = System.currentTimeMillis();
-        FramebufferRender fbo = null;
-        boolean mats = false, lm = false, hojasForzadas = false;
-        int aoPrevio = -1;
-        boolean[] hojasPrevias = null;
+        // (a) Construccion: lee el mundo y sube la geometria; close() la libera siempre.
+        try (GeometriaCacheada geo = GeometriaCacheada.construir(mc, reg)) {
+            avisosGeometria(mc, geo);
+            // (b) Dibujo con la camara dada.
+            BufferedImage img = dibujar(mc, geo, reg, res, cam);
+            File out = new File(new File(mc.mcDataDir, "isorender-test"), "prueba-" + res + "-" + System.currentTimeMillis() + ".png");
+            guardar(img, out);
+            chat(mc, "Prueba lista " + res + "x" + res + " px (" + geo.bloques() + " bloques) en " + out.getPath()
+                    + " [" + (System.currentTimeMillis() - t0) + " ms]");
+        } catch (Throwable e) {
+            errorAlChat(mc, e);
+        }
+    }
+
+    /**
+     * T-018: construye la geometria UNA vez y genera n PNG de 512 px con rotaciones repartidas en 0..360.
+     * Informa el tiempo de construccion y el tiempo medio de dibujo (FBO + dibujo + lectura de pixeles; sin PNG).
+     */
+    public static void ejecutarMulti(Minecraft mc, int[] reg, int n) {
+        final int res = 512;
         try {
-            World w = mc.world;
-            if (w == null || mc.player == null) throw new IllegalStateException("no hay mundo cargado");
-            BlockPos origen = new BlockPos(reg[0], reg[1], reg[2]);
-            int nx = reg[3] - reg[0] + 1, ny = reg[4] - reg[1] + 1, nz = reg[5] - reg[2] + 1;
-
-            // (a) Geometria por capa. Vista de solo lectura: aire fuera de la region (caras de borde visibles).
-            // Ajustes del jugador forzados durante el render (AO suave y hojas con capa determinista); se restauran en finally.
-            VistaRegion vista = new VistaRegion(w, reg);
-            aoPrevio = mc.gameSettings.ambientOcclusion; mc.gameSettings.ambientOcclusion = 2;
-            hojasPrevias = new boolean[]{hoja(Blocks.LEAVES), hoja(Blocks.LEAVES2)};
-            ((BlockLeaves) Blocks.LEAVES).setGraphicsLevel(true); ((BlockLeaves) Blocks.LEAVES2).setGraphicsLevel(true);
-            hojasForzadas = true;
-            int ini = GeometriaRegion.bytesIniciales(reg);
-            BufferBuilder[] capas = new BufferBuilder[GeometriaRegion.ORDEN_CAPAS.length];
-            for (int i = 0; i < capas.length; i++) { capas[i] = new BufferBuilder(ini); capas[i].begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK); }
-            int dibujados = 0, translucidos = 0, fallidos = 0;
-            // getAllInBoxMutable reutiliza un solo BlockPos: sin objetos por bloque.
-            for (BlockPos.MutableBlockPos p : BlockPos.getAllInBoxMutable(origen, new BlockPos(reg[3], reg[4], reg[5]))) {
-                if (!w.isBlockLoaded(p)) continue;
-                IBlockState s = w.getBlockState(p);
-                if (s.getMaterial() == Material.AIR) continue;
-                int k = GeometriaRegion.indiceCapa(s.getBlock().getBlockLayer().name());
-                if (k < 0) { translucidos++; continue; } // TRANSLUCENT: lo dibuja T-020
-                try {
-                    // renderBlock llama a getActualState (orientacion, conexiones, mitades) con la vista.
-                    if (mc.getBlockRendererDispatcher().renderBlock(s, p, vista, capas[k])) dibujados++;
-                } catch (Throwable e) { fallidos++; } // bloque de mod u otro fallo: se omite (RN-010)
+            long t0 = System.nanoTime();
+            try (GeometriaCacheada geo = GeometriaCacheada.construir(mc, reg)) {
+                long construccion = System.nanoTime() - t0;
+                avisosGeometria(mc, geo);
+                long totalDibujo = 0;
+                File dir = new File(mc.mcDataDir, "isorender-test");
+                long marca = System.currentTimeMillis();
+                for (int i = 0; i < n; i++) {
+                    double rot = 360.0 * i / n;
+                    ParametrosCamara c = ParametrosCamara.crear(rot, ParametrosCamara.POR_DEFECTO.elevacion,
+                            ParametrosCamara.POR_DEFECTO.zoom, 0, 0);
+                    long t1 = System.nanoTime();
+                    BufferedImage img = dibujar(mc, geo, reg, res, c); // reutiliza la geometria: no relee el mundo
+                    totalDibujo += System.nanoTime() - t1;
+                    guardar(img, new File(dir, "multi-" + marca + "-" + (i + 1) + "of" + n + "-rot" + Math.round(rot) + ".png"));
+                }
+                chat(mc, n + " imágenes de " + res + "x" + res + " px (" + geo.bloques() + " bloques) en " + dir.getPath());
+                chat(mc, String.format("Construcción de geometría: %.1f ms (una vez). Dibujo medio por imagen: %.1f ms.",
+                        construccion / 1e6, totalDibujo / 1e6 / n));
             }
-            for (BufferBuilder b : capas) b.finishDrawing();
-            if (dibujados == 0) throw new IllegalStateException("la región solo contiene aire"
-                    + (translucidos > 0 ? " o bloques translúcidos (aún no soportados)" : ""));
-            if (translucidos > 0) chat(mc, translucidos + " bloques translúcidos omitidos");
-            if (fallidos > 0) chat(mc, fallidos + " bloques no se pudieron dibujar y se omitieron");
+        } catch (Throwable e) {
+            errorAlChat(mc, e);
+        }
+    }
 
-            // (b) Render fuera de pantalla: aislar estado GL.
+    /**
+     * Dibuja la geometria cacheada con la camara dada en un FBO de res x res y devuelve la imagen ARGB.
+     * Restaura el estado GL (matrices, framebuffer, banderas) al terminar o fallar.
+     */
+    private static BufferedImage dibujar(Minecraft mc, GeometriaCacheada geo, int[] reg, int res, ParametrosCamara cam) {
+        FramebufferRender fbo = null;
+        boolean mats = false;
+        try {
+            int nx = reg[3] - reg[0] + 1, ny = reg[4] - reg[1] + 1, nz = reg[5] - reg[2] + 1;
+            // Render fuera de pantalla: aislar estado GL.
             fbo = new FramebufferRender(res); // valida rango y límites de GPU; lanza con mensaje en español
             // Sin glPushAttrib/glPopAttrib: desincroniza la caché de GlStateManager. Se restaura a mano en finally.
             GlStateManager.matrixMode(GL11.GL_PROJECTION); GlStateManager.pushMatrix();
@@ -81,7 +107,7 @@ public final class RenderPrueba {
             fbo.enlazarYLimpiar(); // viewport res x res; limpia con alfa 0 y profundidad
 
             // Cámara ortográfica parametrizable con encuadre automático (T-016).
-            CamaraGL.aplicar(cam, nx, ny, nz, origen.getX(), origen.getY(), origen.getZ());
+            CamaraGL.aplicar(cam, nx, ny, nz, reg[0], reg[1], reg[2]);
 
             GlStateManager.enableDepth();
             GlStateManager.depthFunc(GL11.GL_LEQUAL);
@@ -94,37 +120,24 @@ public final class RenderPrueba {
             GlStateManager.color(1, 1, 1, 1);
             mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE); // atlas de bloques
             // Lightmap del mundo apagado: la luz es plena y fija (mismo PNG de dia y de noche); el AO sigue en el color de vertice.
-            mc.entityRenderer.disableLightmap(); lm = true;
+            mc.entityRenderer.disableLightmap();
             // Orden: SOLID, CUTOUT_MIPPED, CUTOUT; alphaFunc GREATER 0.1 recorta cristal, hierba alta, antorchas.
-            for (BufferBuilder b : capas) new WorldVertexBufferUploader().draw(b); // dibuja y resetea el buffer
+            geo.dibujar(); // reproduce las display lists (sin releer el mundo)
 
-            // Lectura de pixeles del FBO (RGBA) y volcado a PNG con alfa (se invierte el eje Y).
+            // Lectura de pixeles del FBO (RGBA) y volcado a ARGB (se invierte el eje Y).
             ByteBuffer px = fbo.leerPixeles();
-            int RES = res;
-            BufferedImage img = new BufferedImage(RES, RES, BufferedImage.TYPE_INT_ARGB);
-            for (int y = 0; y < RES; y++) {
-                for (int x = 0; x < RES; x++) {
-                    int i = ((RES - 1 - y) * RES + x) * 4;
+            BufferedImage img = new BufferedImage(res, res, BufferedImage.TYPE_INT_ARGB);
+            for (int y = 0; y < res; y++) {
+                for (int x = 0; x < res; x++) {
+                    int i = ((res - 1 - y) * res + x) * 4;
                     img.setRGB(x, y, (px.get(i + 3) & 255) << 24 | (px.get(i) & 255) << 16
                             | (px.get(i + 1) & 255) << 8 | (px.get(i + 2) & 255));
                 }
             }
-            File dir = new File(mc.mcDataDir, "isorender-test");
-            dir.mkdirs();
-            File out = new File(dir, "prueba-" + RES + "-" + System.currentTimeMillis() + ".png");
-            ImageIO.write(img, "png", out);
-            chat(mc, "Prueba lista " + RES + "x" + RES + " px (" + dibujados + " bloques) en " + out.getPath()
-                    + " [" + (System.currentTimeMillis() - t0) + " ms]");
-        } catch (OutOfMemoryError e) {
-            chat(mc, "Memoria insuficiente para dibujar la región; usa una región más pequeña o menos resolución.");
-        } catch (Throwable e) {
-            chat(mc, "Error en la prueba de render: " + e);
-            e.printStackTrace();
+            return img;
         } finally {
             // Restaurar siempre: matrices, atributos GL, framebuffer principal y su viewport.
             try {
-                if (aoPrevio >= 0) mc.gameSettings.ambientOcclusion = aoPrevio;
-                if (hojasForzadas) { ((BlockLeaves) Blocks.LEAVES).setGraphicsLevel(hojasPrevias[0]); ((BlockLeaves) Blocks.LEAVES2).setGraphicsLevel(hojasPrevias[1]); }
                 if (mats) {
                     GlStateManager.matrixMode(GL11.GL_PROJECTION); GlStateManager.popMatrix();
                     GlStateManager.matrixMode(GL11.GL_MODELVIEW); GlStateManager.popMatrix();
