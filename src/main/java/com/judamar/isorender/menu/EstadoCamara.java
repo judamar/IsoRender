@@ -21,6 +21,22 @@ public final class EstadoCamara {
         return new Configuracion(base.carpetaSalida, resolucion, actual, fondo, base.tamanoMaximo);
     }
 
+    /** T-043 (RF-015): Y máxima absoluta e inclusiva del corte por altura; null = sin corte. No se persiste (va ligada al mundo) ni lo toca restablecer(). */
+    private Integer corteY;
+
+    public Integer corteY() { return corteY; }
+
+    /** Vacío o en blanco = sin corte; si no es un entero lanza IllegalArgumentException con mensaje en español. */
+    public void fijarCorte(String texto) {
+        String t = texto == null ? "" : texto.trim();
+        if (t.isEmpty()) { corteY = null; return; }
+        try {
+            corteY = Integer.valueOf(t);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Corte Y no válido: «" + t + "». Escribe un número entero o déjalo vacío.");
+        }
+    }
+
     public ParametrosCamara actual() { return actual; }
 
     public FondoVista fondo() { return fondo; }

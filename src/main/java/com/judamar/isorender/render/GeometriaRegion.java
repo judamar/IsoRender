@@ -29,6 +29,14 @@ final class GeometriaRegion {
         return (int) Math.min(volumen(reg) * 64L, 64L << 20);
     }
 
+    /** T-043 (RF-015): copia de reg con Y maxima = corteY si y1 <= corteY < y2; con null o corte fuera de la region devuelve reg tal cual (CA-015.2). Nunca modifica reg. */
+    static int[] recortar(int[] reg, Integer corteY) {
+        if (reg == null || corteY == null || corteY < reg[1] || corteY >= reg[4]) return reg;
+        int[] r = reg.clone();
+        r[4] = corteY;
+        return r;
+    }
+
     /** Clave de cache: dos regiones son la misma si tienen la misma caja (null nunca coincide). */
     static boolean misma(int[] a, int[] b) { return a != null && b != null && java.util.Arrays.equals(a, b); }
 

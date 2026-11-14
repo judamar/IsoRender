@@ -36,6 +36,19 @@ public class GeometriaRegionTest {
         assertFalse(GeometriaRegion.misma(r, null));
         assertFalse(GeometriaRegion.misma(null, null));
     }
+    @Test public void recortarCorteDentro() { // CA-015.1: Y máxima inclusiva
+        int[] orig = r.clone();
+        assertArrayEquals(new int[]{10, 5, -3, 19, 8, 1}, GeometriaRegion.recortar(r, 8));
+        assertArrayEquals(new int[]{10, 5, -3, 19, 5, 1}, GeometriaRegion.recortar(r, 5)); // = y1: queda una capa
+        assertArrayEquals(orig, r); // no modifica el original
+    }
+    @Test public void recortarSinEfecto() { // CA-015.2
+        assertSame(r, GeometriaRegion.recortar(r, 10));   // = y2
+        assertSame(r, GeometriaRegion.recortar(r, 11));   // > y2
+        assertSame(r, GeometriaRegion.recortar(r, 4));    // < y1
+        assertSame(r, GeometriaRegion.recortar(r, null)); // sin corte
+        assertArrayEquals(new int[]{10, 5, -3, 19, 10, 1}, r);
+    }
     @Test public void cantidadMulti() {
         assertEquals(4, GeometriaRegion.parsearN(""));
         assertEquals(4, GeometriaRegion.parsearN(null));

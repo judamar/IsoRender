@@ -155,7 +155,8 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
             }
             String error = ValidacionMundo.validar(seleccion, mc.world, Ajustes.actual().tamanoMaximo);
             if (error != null) { decir(mc, error); return; }
-            RenderPrueba.exportar(mc, seleccion.region(), camara.resolucion(), camara.actual());
+            // T-043 (RF-015): exporta la región recortada por el corte de altura del menú (el nombre de archivo usa la caja recortada)
+            RenderPrueba.exportar(mc, RenderPrueba.regionConCorte(seleccion.region(), camara.corteY()), camara.resolucion(), camara.actual());
         } catch (Throwable e) {
             Fallos.informar(mc, "preparar el render", e); // RNF-005
         }

@@ -65,7 +65,7 @@ Versión v0.4 (adaptada para ejecución con Claude Code). Basado en la ERS v0.3.
 
 - Render de ítem en la mano o de ítem y bloque por ID (RF-030), del brief original; se estima aparte.
 
-- Corte por altura de la estructura (RF-015).
+- Corte por altura de la estructura (RF-015): opcional **implementado** (T-043, petición del solicitante, 2026-11-14).
 
 # 4. Stakeholders y roles
 
@@ -457,11 +457,11 @@ Prioridades: 19 Must, 9 Should, 2 Could y 1 Won't. Resumen:
 
 ### RF-015: Corte por altura
 
-**Descripción:** El sistema deberá permitir ocultar las capas superiores a una altura indicada para ver el interior.
+**Descripción:** El sistema deberá permitir ocultar las capas superiores a una altura indicada para ver el interior. La altura es una Y máxima absoluta e inclusiva: se dibujan los bloques con y ≤ corte.
 
-**Rol(es):** Usuario final \| **Prioridad:** Could
+**Rol(es):** Usuario final \| **Prioridad:** Could (implementado como opcional, T-043)
 
-**Origen:** *\[SUPUESTO\]* No indicado por el solicitante
+**Origen:** petición del solicitante (2026-11-14)
 
 **Precondiciones:** Región válida.
 
@@ -471,7 +471,13 @@ Prioridades: 19 Must, 9 Should, 2 Could y 1 Won't. Resumen:
 
 - **CA-015.2 (caso límite):** **Dado** una altura de corte fuera de la región, **cuando** se renderiza, **entonces** se ignora el corte y se dibuja todo.
 
-**Notas / dudas:** *\[SUPUESTO\]* Idea del analista; no pedida. Se estima como opcional.
+- **CA-015.3 (caso feliz):** **Dado** una región válida y una altura de corte dentro de ella escrita en el campo «Corte Y» del menú, **cuando** se confirma el valor y se renderiza, **entonces** el corte se ve en la vista previa y en el PNG exportado, y se puede cambiar o quitar (campo vacío) desde el menú.
+
+**Notas / dudas:**
+
+- *\[SUPUESTO\]* El encuadre sigue a la caja recortada: la cámara se ajusta a lo visible, no a la región completa; el nombre del archivo usa la caja recortada (y2 = corte).
+- *\[SUPUESTO\]* El corte no se guarda en la configuración (es una Y absoluta ligada al mundo) y «Restablecer» no lo borra.
+- *\[SUPUESTO\]* Solo hay Y máxima; no hay Y mínima. Un corte igual o mayor que y2, o menor que y1, se ignora (CA-015.2).
 
 ## 7.4 EP-4 Menú interactivo
 
@@ -988,7 +994,7 @@ El mod no usa base de datos. Las entidades de trabajo son:
 |---|---|---|
 | Selección | Punto 1 (x, y, z); punto 2 (x, y, z). | Define una Región. |
 | Región | Esquinas mínima y máxima; dimensiones; bloques contenidos. | Es la entrada del render. |
-| Ajustes de cámara | Rotación; elevación; zoom; desplazamiento; resolución; corte por altura (opcional). | Se editan en el menú y se guardan en la Configuración. |
+| Ajustes de cámara | Rotación; elevación; zoom; desplazamiento; resolución; corte por altura (opcional). | Se editan en el menú y se guardan en la Configuración (el corte por altura no se guarda: RF-015). |
 | Configuración | Carpeta de salida; resolución; cámara por defecto; tamaño máximo; último ajuste. | Alimenta los Ajustes de cámara. |
 | Resultado de render | Estado (éxito/error); ruta del archivo; mensaje. | Se muestra en el chat (RF-027). |
 | Imagen PNG | Ancho = alto = resolución; canal alfa; nombre con fecha y coordenadas. | Resultado de un render exitoso. |

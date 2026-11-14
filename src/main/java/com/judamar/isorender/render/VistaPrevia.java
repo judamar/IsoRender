@@ -37,18 +37,19 @@ public final class VistaPrevia implements AutoCloseable {
     private long ultimoReorden;
     private int frame;
 
-    public void dibujar(Minecraft mc, Seleccion sel, ParametrosCamara cam, FondoVista fondo, int x, int y, int lado, int escala) {
+    public void dibujar(Minecraft mc, Seleccion sel, ParametrosCamara cam, FondoVista fondo, int x, int y, int lado, int escala, Integer corteY) {
+        int[] reg = GeometriaRegion.recortar(sel.region(), corteY); // T-043: la vista solo ve la caja recortada
         if (fondo == FondoVista.TABLERO) tablero(x, y, lado); else Gui.drawRect(x, y, x + lado, y + lado, fondo.argb);
         try {
-            actualizar(mc, sel, cam, lado, escala);
+            actualizar(mc, sel, reg, cam, lado, escala);
         } catch (Throwable e) { // RNF-005: la vista previa falla sola; el menú sigue abierto
-            fallar(e, sel.region(), cam);
+            fallar(e, reg, cam);
         }
         if (estado != Estado.LISTA) { texto(mc.fontRenderer, motivo, x, y, lado); return; }
         try {
             quad(mc, x, y, lado);
         } catch (Throwable e) {
-            fallar(e, sel.region(), cam);
+            fallar(e, reg, cam);
             return;
         }
         if (simplificado) {
@@ -58,12 +59,12 @@ public final class VistaPrevia implements AutoCloseable {
     }
 
     /** Valida la región, construye la geometría (diferida un frame) y repinta el FBO si hace falta. Fija estado y motivo. */
-    private void actualizar(Minecraft mc, Seleccion sel, ParametrosCamara cam, int lado, int escala) {
-        int[] reg = sel.region();
+    private void actualizar(Minecraft mc, Seleccion sel, int[] reg, ParametrosCamara cam, int lado, int escala) {
+        int[] total = sel.region(); // la validación (tamaño máximo, chunks cargados) es sobre la región completa; reg es la recortada
         // (a) Validación al abrir, cada ~20 frames y cuando cambia la región.
-        if (frame++ % REVALIDAR_CADA == 0 || !Arrays.equals(reg, regValidada)) {
+        if (frame++ % REVALIDAR_CADA == 0 || !Arrays.equals(total, regValidada)) {
             motivoInvalido = !sel.completa() ? TextoSeleccion.describir(sel) : ValidacionMundo.validar(sel, mc.world, Ajustes.actual().tamanoMaximo);
-            regValidada = reg;
+            regValidada = total;
         }
         if (motivoInvalido != null) {
             liberar(); estado = Estado.SIN_REGION; motivo = motivoInvalido; return;

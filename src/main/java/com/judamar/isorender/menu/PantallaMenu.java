@@ -22,12 +22,12 @@ public class PantallaMenu extends GuiScreen {
             ID_PRESET = 110 /* + ordinal del preset */, ID_RESTABLECER = 120;
     private static final int ANCHO_VISTA = 100; // botón «Vista» junto a «Fondo» (X+110+6 .. 236 < VistaPreviaCalculo.X_MIN)
     private static final int X = 20, ANCHO_DESLIZADOR = 150, ANCHO_CAMPO = 50, ANCHO_PRESET = 64, ANCHO_ERROR = 140;
-    private static final int N = Parametro.values().length; // el campo de resolución es campos[N]
+    private static final int N = Parametro.values().length; // el campo de resolución es campos[N] y el de corte Y campos[N + 1]
     private final Seleccion seleccion;
     private final EstadoCamara camara;
     private final Runnable alRenderizar, alCerrar;
     private final Deslizador[] deslizadores = new Deslizador[N];
-    private final GuiTextField[] campos = new GuiTextField[N + 1];
+    private final GuiTextField[] campos = new GuiTextField[N + 2];
     private final VistaPrevia vista = new VistaPrevia(); // T-025: se crea aquí, no en initGui (initGui se repite al redimensionar)
     private GuiButton botonVista, botonResolucion, botonRenderizar;
     private String error;
@@ -38,8 +38,12 @@ public class PantallaMenu extends GuiScreen {
         this.seleccion = seleccion; this.camara = camara; this.alRenderizar = alRenderizar; this.alCerrar = alCerrar;
     }
 
-    /** Filas de 22 px desde y = 40. */
-    private static int fila(int i) { return 40 + 22 * i; }
+    /**
+     * Filas de 21 px desde y = 30 (botones de 20 px, 1 px de hueco). T-043 añadió la fila del corte Y: con 22 px desde y = 40 la
+     * décima fila no cabía en 240 px de alto (ventana mínima 427 × 240); título y selección suben (y = 5 y 17) para dejar sitio.
+     * Fila 9 = y 219..239.
+     */
+    private static int fila(int i) { return 30 + 21 * i; }
 
     @Override
     public void initGui() {
@@ -56,7 +60,8 @@ public class PantallaMenu extends GuiScreen {
         campos[N] = nuevoCampo(N, fila(6));
         for (PresetCamara pr : PresetCamara.values())
             buttonList.add(new GuiButton(ID_PRESET + pr.ordinal(), X + pr.ordinal() * (ANCHO_PRESET + 4), fila(7), ANCHO_PRESET, 20, pr.etiqueta));
-        buttonList.add(new GuiButton(ID_RESTABLECER, X, fila(8), 70, 20, "Restablecer"));
+        campos[N + 1] = nuevoCampo(N + 1, fila(8)); // T-043: corte Y (la etiqueta y el rango se dibujan en drawScreen)
+        buttonList.add(new GuiButton(ID_RESTABLECER, X, fila(9), 70, 20, "Restablecer"));
         // Renderizar y Cerrar bajo la vista previa, centrados en la zona derecha (x >= VistaPreviaCalculo.X_MIN)
         int libre = width - 10 - 240, w = Math.min(150, libre), x = 240 + (libre - w) / 2;
         buttonList.add(botonRenderizar = new GuiButton(ID_RENDERIZAR, x, height - 52, w, 20, "Renderizar"));
@@ -82,6 +87,7 @@ public class PantallaMenu extends GuiScreen {
         botonVista.displayString = textoVista(camara.actual().perspectiva);
         botonResolucion.displayString = "Resolución: " + camara.resolucion() + " px";
         campos[N].setText(String.valueOf(camara.resolucion()));
+        campos[N + 1].setText(camara.corteY() == null ? "" : String.valueOf(camara.corteY()));
     }
 
     /** «Vista: Perspectiva» si cabe en el botón (con margen de 4 px a cada lado); si no, la forma corta. */
@@ -108,13 +114,15 @@ public class PantallaMenu extends GuiScreen {
             if (i < N) {
                 Parametro p = Parametro.values()[i];
                 deslizadores[i].poner(camara.fijar(p, p.leer(campos[i].getText())));
-            } else camara.fijarResolucion(ResolucionSalida.parsear(campos[i].getText()));
+            } else if (i == N) camara.fijarResolucion(ResolucionSalida.parsear(campos[i].getText()));
+            else camara.fijarCorte(campos[i].getText()); // T-043 (RF-015)
             error = null;
         } catch (IllegalArgumentException e) {
             error = e.getMessage();
         }
         if (i < N) campos[i].setText(Parametro.formato(Parametro.values()[i].valor(camara.actual())));
-        else { campos[i].setText(String.valueOf(camara.resolucion())); botonResolucion.displayString = "Resolución: " + camara.resolucion() + " px"; }
+        else if (i == N) { campos[i].setText(String.valueOf(camara.resolucion())); botonResolucion.displayString = "Resolución: " + camara.resolucion() + " px"; }
+        else campos[i].setText(camara.corteY() == null ? "" : String.valueOf(camara.corteY()));
     }
 
     @Override
@@ -127,13 +135,17 @@ public class PantallaMenu extends GuiScreen {
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         try {
             drawDefaultBackground();
-            drawCenteredString(fontRenderer, "IsoRender", width / 2, 12, 0xFFFFFF);
+            drawCenteredString(fontRenderer, "IsoRender", width / 2, 5, 0xFFFFFF);
             boolean completa = seleccion.completa();
-            drawCenteredString(fontRenderer, TextoSeleccion.describir(seleccion), width / 2, 28, completa ? 0x55FF55 : 0xFFAA00);
+            drawCenteredString(fontRenderer, TextoSeleccion.describir(seleccion), width / 2, 17, completa ? 0x55FF55 : 0xFFAA00);
             super.drawScreen(mouseX, mouseY, partialTicks);
             for (GuiTextField c : campos) c.drawTextBox();
-            if (error != null) { // junto a Restablecer (fila 8), máx. 2 líneas ajustadas a 140 px para no invadir la vista previa
-                int ye = fila(8) + 1, n = 0;
+            // T-043: etiqueta del corte Y (2 líneas a la izquierda del campo) y rango válido y1..y2 si hay selección completa
+            drawString(fontRenderer, "Corte Y (vacío = sin corte)", X, fila(8) + 1, 0xFFFFFF);
+            int[] reg = seleccion.region();
+            if (reg != null) drawString(fontRenderer, "Rango válido: " + reg[1] + ".." + reg[4], X, fila(8) + 11, 0xAAAAAA);
+            if (error != null) { // junto a Restablecer (fila 9), máx. 2 líneas ajustadas a 140 px para no invadir la vista previa
+                int ye = fila(9) + 1, n = 0;
                 for (String l : fontRenderer.listFormattedStringToWidth(error, ANCHO_ERROR)) {
                     if (n++ == 2) break;
                     drawString(fontRenderer, l, 96, ye, 0xFF5555); ye += 9;
@@ -142,7 +154,7 @@ public class PantallaMenu extends GuiScreen {
             // Vista previa (T-025): recuadro a la derecha de los controles; la escala de GUI fija el tamaño real del FBO.
             int[] r = VistaPreviaCalculo.recuadro(width, height);
             if (r == null) drawCenteredString(fontRenderer, "Ventana demasiado pequeña para la vista previa", width / 2, height - 72, 0xFFAA00);
-            else vista.dibujar(mc, seleccion, camara.actual(), camara.fondo(), r[0], r[1], r[2], new ScaledResolution(mc).getScaleFactor());
+            else vista.dibujar(mc, seleccion, camara.actual(), camara.fondo(), r[0], r[1], r[2], new ScaledResolution(mc).getScaleFactor(), camara.corteY());
         } catch (Throwable e) { // RNF-005: un fallo al dibujar el menu lo cierra y avisa; no cierra el juego
             Fallos.informar(mc, "dibujar el menú", e);
             mc.displayGuiScreen(null);

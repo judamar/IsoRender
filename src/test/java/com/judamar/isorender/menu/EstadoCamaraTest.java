@@ -1,6 +1,6 @@
 package com.judamar.isorender.menu;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import com.judamar.isorender.configuracion.Configuracion;
 import com.judamar.isorender.render.FondoVista;
@@ -20,6 +20,26 @@ public class EstadoCamaraTest {
         assertEquals(ParametrosCamara.POR_DEFECTO, e.actual());
         assertEquals(fondo, e.fondo());   // no toca el fondo
         assertEquals(2048, e.resolucion()); // ni la resolución
+    }
+    @Test public void corteY() { // RF-015
+        EstadoCamara e = new EstadoCamara();
+        assertNull(e.corteY());
+        e.fijarCorte("70"); assertEquals(Integer.valueOf(70), e.corteY());
+        e.fijarCorte("  -12 "); assertEquals(Integer.valueOf(-12), e.corteY());
+        e.fijarCorte("70");
+        e.restablecer(); assertEquals(Integer.valueOf(70), e.corteY()); // restablecer no lo toca
+        e.fijarCorte(""); assertNull(e.corteY());
+        e.fijarCorte("70"); e.fijarCorte("   "); assertNull(e.corteY());
+        e.fijarCorte(null); assertNull(e.corteY());
+    }
+    @Test public void corteYNoValidoConservaElAnterior() {
+        EstadoCamara e = new EstadoCamara();
+        e.fijarCorte("70");
+        for (String mal : new String[] {"abc", "7.5", "99999999999"}) {
+            try { e.fijarCorte(mal); fail(mal); }
+            catch (IllegalArgumentException ex) { assertEquals("Corte Y no válido: «" + mal + "». Escribe un número entero o déjalo vacío.", ex.getMessage()); }
+        }
+        assertEquals(Integer.valueOf(70), e.corteY());
     }
     @Test public void resolucion() { // RF-020
         EstadoCamara e = new EstadoCamara();

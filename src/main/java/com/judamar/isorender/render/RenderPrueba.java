@@ -31,6 +31,9 @@ public final class RenderPrueba {
     static Guardia guardia() { return GUARDIA; }
     static int erroresGl() { return erroresGl; }
     /** True si hay un render (o un estres) en curso. */
+    /** T-043 (RF-015): region a exportar con el corte por altura (Y maxima absoluta e inclusiva); sin corte o fuera de la region, la misma. */
+    public static int[] regionConCorte(int[] reg, Integer corteY) { return GeometriaRegion.recortar(reg, corteY); }
+
     public static boolean ocupado() { return GUARDIA.ocupada(); }
 
     /** Argumento de "/isorender prueba-multi [n]": entero 2-8; vacío = 4. Lanza IllegalArgumentException en español. */

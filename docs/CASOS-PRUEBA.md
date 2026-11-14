@@ -1,6 +1,6 @@
 # Casos de prueba y estructuras de referencia (T-033)
 
-Base: docs/PLAN.md §7 (CP-01 a CP-31) y los criterios Dado/Cuando/Entonces de docs/ERS.md. Entorno de pruebas: cliente vanilla 1.12.2 + LiteLoader limpio (instancia `IsoRender-test`) con el único `.litemod`. Mundo: superplano en creativo, de un jugador, con trucos activados.
+Base: docs/PLAN.md §7 (CP-01 a CP-32) y los criterios Dado/Cuando/Entonces de docs/ERS.md. Entorno de pruebas: cliente vanilla 1.12.2 + LiteLoader limpio (instancia `IsoRender-test`) con el único `.litemod`. Mundo: superplano en creativo, de un jugador, con trucos activados.
 
 **Columna Tipo:** `U` = ya cubierto por pruebas unitarias (`./gradlew test`); `J` = se comprueba en el juego (lo ejecuta el solicitante con la lista de abajo; el desarrollador entrega la lista y espera su aprobación, como pide CLAUDE.md); `M` = medición.
 **Estado:** `—` sin ejecutar, `OK`, `FALLA (nota)`.
@@ -71,7 +71,8 @@ Pasos con la selección hechos con `/isorender pos1` y `pos2` apuntando a bloque
 | CP-28 | ER-1 | F2 antes/después de renderizar y de cerrar el menú | Fotograma idéntico | J | OK (T-022) |
 | CP-29 | — | Menú en 854×480 y 1920×1080 | Controles visibles y sin solape | J | OK (T-026; 1920×1080 en T-034) |
 | CP-30 | ER-1 | 20 selecciones y renders; comparar el mundo (F3+A, `/clone` de control) | El mundo no cambia | J | OK (T-034, solicitante, 2026-11-14) |
-| CP-31 | — | Solo si T-042/T-043 | — | — | no aplica |
+| CP-31 | — | Solo si T-042 (RF-030) | — | — | no aplica |
+| CP-32 | ER-2 (32³) | RF-015, opcional T-043. Con la región completa, abrir el menú; escribir en «Corte Y» una Y de dentro de la región y pulsar Intro; ver la vista previa; `Renderizar`; repetir con una Y fuera de la región (< y1 y > y2), con texto no numérico y con el campo vacío; reabrir el menú tras «Restablecer» y tras cerrar y reabrir | Con Y dentro: la vista previa y el PNG muestran solo los bloques con y ≤ corte y el encuadre se ajusta a lo visible (CA-015.1, CA-015.3). Fuera de la región o vacío: se dibuja todo (CA-015.2). Texto no numérico: error en español en rojo y se conserva el valor anterior. El rango válido y1..y2 se muestra bajo la etiqueta; «Restablecer» no borra el corte; el nombre del PNG lleva la Y del corte como y2; el mundo no cambia | J | — |
 
 ## 3. Procedimiento
 1. **T-034** (funcionales): el desarrollador entrega la lista del §2 por bloques (selección → render → menú → configuración); el solicitante ejecuta y anota Estado y defectos (con severidad).
