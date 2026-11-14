@@ -17,7 +17,7 @@ public class NombreArchivoTest {
     @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
     @Test public void formatoExacto() {
-        assertEquals("estructura_20261114-090507_10,64,20_25,80,35.png", NombreArchivo.base(T, new int[]{10, 64, 20, 25, 80, 35}));
+        assertEquals("structure_20261114-090507_10,64,20_25,80,35.png", NombreArchivo.base(T, new int[]{10, 64, 20, 25, 80, 35}));
     }
 
     @Test public void itemNombre() {
@@ -29,7 +29,7 @@ public class NombreArchivoTest {
 
     @Test public void coordenadasNegativasSonValidas() {
         String n = NombreArchivo.base(T, new int[]{-10, -5, -20, 3, 0, -1});
-        assertEquals("estructura_20261114-090507_-10,-5,-20_3,0,-1.png", n);
+        assertEquals("structure_20261114-090507_-10,-5,-20_3,0,-1.png", n);
         for (char c : "/\\:*?\"<>|".toCharArray()) assertEquals("caracter invalido " + c, -1, n.indexOf(c));
     }
 
@@ -74,7 +74,7 @@ public class NombreArchivoTest {
             ConversorImagen.guardarPng(new BufferedImage(2, 2, BufferedImage.TYPE_INT_ARGB), out);
             fail("debia lanzar IOException");
         } catch (IOException e) {
-            assertTrue(e.getMessage(), e.getMessage().startsWith("no se pudo crear la carpeta"));
+            assertTrue(e.getMessage(), e.getMessage().startsWith("could not create folder"));
         }
         assertFalse(out.exists());
     }

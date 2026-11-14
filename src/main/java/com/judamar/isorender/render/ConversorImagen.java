@@ -60,9 +60,9 @@ public final class ConversorImagen {
     /** T-028 (CA-024.2): crea la carpeta si falta y escribe el PNG; ante cualquier fallo no deja un archivo a medias. */
     public static void guardarPng(BufferedImage img, File out) throws IOException {
         File dir = out.getAbsoluteFile().getParentFile();
-        if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) throw new IOException("no se pudo crear la carpeta " + dir.getPath());
+        if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) throw new IOException("could not create folder " + dir.getPath());
         try {
-            if (!ImageIO.write(img, "png", out)) throw new IOException("no hay codificador PNG");
+            if (!ImageIO.write(img, "png", out)) throw new IOException("no PNG encoder available");
         } catch (IOException | RuntimeException e) {
             out.delete(); // no dejar un PNG a medias
             throw e;

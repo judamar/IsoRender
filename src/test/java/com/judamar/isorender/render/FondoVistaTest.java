@@ -6,12 +6,12 @@ import org.junit.Test;
 
 public class FondoVistaTest {
     @Test public void siguienteRecorreTodosYVuelveAlPrimero() {
-        FondoVista f = FondoVista.TABLERO;
+        FondoVista f = FondoVista.CHECKERBOARD;
         for (int i = 0; i < FondoVista.values().length; i++) f = f.siguiente();
-        assertEquals(FondoVista.TABLERO, f);
-        assertEquals(FondoVista.BLANCO, FondoVista.TABLERO.siguiente());
+        assertEquals(FondoVista.CHECKERBOARD, f);
+        assertEquals(FondoVista.WHITE, FondoVista.CHECKERBOARD.siguiente());
     }
     @Test public void lisosSonOpacos() {
-        for (FondoVista f : FondoVista.values()) if (f != FondoVista.TABLERO) assertEquals(0xFF, f.argb >>> 24);
+        for (FondoVista f : FondoVista.values()) if (f != FondoVista.CHECKERBOARD) assertEquals(0xFF, f.argb >>> 24);
     }
 }

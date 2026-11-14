@@ -55,14 +55,14 @@ final class EstimacionMemoria {
         return 0;
     }
 
-    /** Null si la geometria cabe; si no, el mensaje en español. */
+    /** Null si la geometria cabe; si no, el mensaje en inglés. */
     static String comprobarGeometria(long volumen, long libreHeap) {
         long need = geometria(volumen);
         return need * MARGEN <= libreHeap ? null : mensaje(need, libreHeap);
     }
 
     static String mensaje(long necesario, long libre) {
-        return "Memoria insuficiente: se necesitan unos " + (long) Math.ceil(necesario * MARGEN / MB) + " MB y solo hay "
-                + Math.max(0, libre / MB) + " MB libres. Usa una región más pequeña o menos resolución.";
+        return "Not enough memory: about " + (long) Math.ceil(necesario * MARGEN / MB) + " MB are needed and only "
+                + Math.max(0, libre / MB) + " MB are free. Use a smaller region or a lower resolution.";
     }
 }

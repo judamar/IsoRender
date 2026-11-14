@@ -42,14 +42,14 @@ final class GeometriaRegion {
 
     static final int MULTI_MIN = 2, MULTI_MAX = 8, MULTI_DEFECTO = 4;
 
-    /** Numero de imagenes de prueba-multi: vacio = 4; fuera de 2-8 o no numerico lanza con mensaje en espanol. */
+    /** Numero de imagenes de test-multi: vacio = 4; fuera de 2-8 o no numerico lanza con mensaje en ingles. */
     static int parsearN(String arg) {
         String t = arg == null ? "" : arg.trim();
         if (t.isEmpty()) return MULTI_DEFECTO;
         int n;
         try { n = Integer.parseInt(t); }
-        catch (NumberFormatException e) { throw new IllegalArgumentException("Cantidad no válida: «" + t + "». Usa un entero entre " + MULTI_MIN + " y " + MULTI_MAX + "."); }
-        if (n < MULTI_MIN || n > MULTI_MAX) throw new IllegalArgumentException("Cantidad fuera de rango: " + n + ". Debe estar entre " + MULTI_MIN + " y " + MULTI_MAX + ".");
+        catch (NumberFormatException e) { throw new IllegalArgumentException("Invalid count: \"" + t + "\". Use an integer between " + MULTI_MIN + " and " + MULTI_MAX + "."); }
+        if (n < MULTI_MIN || n > MULTI_MAX) throw new IllegalArgumentException("Count out of range: " + n + ". Must be between " + MULTI_MIN + " and " + MULTI_MAX + ".");
         return n;
     }
 }

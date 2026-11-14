@@ -3,7 +3,7 @@ package com.judamar.isorender.render;
 import net.minecraft.client.Minecraft;
 
 /**
- * T-022 (CP-24, CP-27): "/isorender estres [n]". n renders consecutivos de la region a 512 px, UNO POR FRAME (el
+ * T-022 (CP-24, CP-27): "/isorender stress [n]". n renders consecutivos de la region a 512 px, UNO POR FRAME (el
  * llamador invoca paso() desde onRender), para no bloquear el juego. Cada render construye y libera su geometria y su FBO,
  * asi que la memoria debe quedar estable. Retiene la guardia de RenderPrueba hasta terminar o fallar. Solo hilo de render.
  */
@@ -22,12 +22,12 @@ public final class Estres {
         this.erroresGlInicio = RenderPrueba.erroresGl();
     }
 
-    /** Comprueba el argumento sin iniciar nada; lanza IllegalArgumentException en español. */
+    /** Comprueba el argumento sin iniciar nada; lanza IllegalArgumentException en inglés. */
     public static void validarArgumento(String argN) { ResumenEstres.parsearN(argN); }
 
     /** Valida n (1-50, vacio = 30) y toma la guardia; devuelve null (con aviso en el chat) si no se puede iniciar. */
     public static Estres iniciar(Minecraft mc, int[] reg, String argN) {
-        int n = ResumenEstres.parsearN(argN); // lanza IllegalArgumentException en español
+        int n = ResumenEstres.parsearN(argN); // lanza IllegalArgumentException en inglés
         if (!RenderPrueba.guardia().entrar()) {
             decir(mc, Chat.OCUPADO);
             return null;
@@ -35,7 +35,7 @@ public final class Estres {
         Estres e = new Estres(reg, n);
         System.gc(); // referencia estable para comparar "antes" y "despues"
         e.resumen.usadoAntes = EstimacionMemoria.usado();
-        decir(mc, "Estrés: " + n + " renders de " + RES + " px, uno por frame. Puede notarse algo de lentitud; no abras otro render hasta el final.");
+        decir(mc, "Stress test: " + n + " renders at " + RES + " px, one per frame. The game may lag a little; do not start another render until it finishes.");
         return e;
     }
 
@@ -55,7 +55,7 @@ public final class Estres {
                     ParametrosCamara.POR_DEFECTO.zoom, 0, 0));
         } catch (Throwable e) {
             error = true;
-            Fallos.informar(mc, "renderizar durante el estrés", e);
+            Fallos.informar(mc, "rendering during the stress test", e);
         }
         resumen.registrar(System.nanoTime() - t0, error);
         i++;
@@ -65,7 +65,7 @@ public final class Estres {
                 System.gc();
                 resumen.usadoDespues = EstimacionMemoria.usado();
                 resumen.erroresGl = RenderPrueba.erroresGl() - erroresGlInicio;
-                if (error) decir(mc, "Estrés detenido por un error en el render " + i + ".");
+                if (error) decir(mc, "Stress test stopped by an error in render " + i + ".");
                 for (String l : resumen.lineas()) decir(mc, l);
             } finally { cerrar(); }
             return true;

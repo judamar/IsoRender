@@ -61,7 +61,7 @@ public class GeometriaRegionTest {
     @Test public void contadores() {
         ResumenGeometria v = new ResumenGeometria(0, 0, 0);
         assertTrue(v.vacio());
-        assertEquals("la región solo contiene aire", v.motivoVacio());
+        assertEquals("The region contains only air.", v.motivoVacio());
         ResumenGeometria g = new ResumenGeometria(10, 1, 0);
         assertFalse(g.vacio());
         assertEquals(10, g.bloques); assertEquals(1, g.fallidos);

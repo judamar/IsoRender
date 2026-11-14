@@ -16,6 +16,6 @@ final class ResumenGeometria {
     /** Sin nada que dibujar: ni bloques con modelo ni entidades de bloque (una región con solo un cofre no está vacía). */
     boolean vacio() { return bloques == 0 && entidades == 0; }
 
-    /** Motivo en español de que no haya nada que dibujar. */
-    String motivoVacio() { return "la región solo contiene aire"; }
+    /** Motivo en inglés de que no haya nada que dibujar. */
+    String motivoVacio() { return "The region contains only air."; }
 }

@@ -1,6 +1,8 @@
 package com.judamar.isorender.render;
 
-/** T-022: acumulador y texto del resultado de "/isorender estres". Logica pura (sin Minecraft). */
+import java.util.Locale;
+
+/** T-022: acumulador y texto del resultado de "/isorender stress". Logica pura (sin Minecraft). */
 final class ResumenEstres {
     static final int MIN = 1, MAX = 50, DEFECTO = 30;
 
@@ -11,14 +13,14 @@ final class ResumenEstres {
 
     ResumenEstres(int solicitados) { this.solicitados = solicitados; }
 
-    /** Vacio = 30; fuera de 1-50 o no numerico lanza con mensaje en español. */
+    /** Vacio = 30; fuera de 1-50 o no numerico lanza con mensaje en inglés. */
     static int parsearN(String arg) {
         String t = arg == null ? "" : arg.trim();
         if (t.isEmpty()) return DEFECTO;
         int n;
         try { n = Integer.parseInt(t); }
-        catch (NumberFormatException e) { throw new IllegalArgumentException("Cantidad no válida: «" + t + "». Usa un entero entre " + MIN + " y " + MAX + "."); }
-        if (n < MIN || n > MAX) throw new IllegalArgumentException("Cantidad fuera de rango: " + n + ". Debe estar entre " + MIN + " y " + MAX + ".");
+        catch (NumberFormatException e) { throw new IllegalArgumentException("Invalid count: \"" + t + "\". Use an integer between " + MIN + " and " + MAX + "."); }
+        if (n < MIN || n > MAX) throw new IllegalArgumentException("Count out of range: " + n + ". Must be between " + MIN + " and " + MAX + ".");
         return n;
     }
 
@@ -36,11 +38,11 @@ final class ResumenEstres {
 
     String[] lineas() {
         return new String[] {
-            String.format("Estrés: %d de %d renders de 512 px completados, %d con error. Tiempo medio: %.1f ms por render.",
+            String.format(Locale.ROOT, "Stress test: %d of %d renders at 512 px completed, %d with errors. Average time: %.1f ms per render.",
                     hechos, solicitados, errores, mediaMs()),
-            String.format("Memoria JVM usada: antes %d MB, tras el 1.º render %d MB, al final %d MB (%+.1f %% frente al 1.º; tras recolectar basura).",
+            String.format(Locale.ROOT, "JVM memory used: before %d MB, after the 1st render %d MB, at the end %d MB (%+.1f%% vs. the 1st; after garbage collection).",
                     mb(usadoAntes), mb(usadoTrasPrimero), mb(usadoDespues), variacionPct()),
-            "Errores de OpenGL durante el estrés: " + erroresGl + "."
+            "OpenGL errors during the stress test: " + erroresGl + "."
         };
     }
 }

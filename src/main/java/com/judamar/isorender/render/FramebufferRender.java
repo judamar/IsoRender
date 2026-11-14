@@ -30,23 +30,23 @@ public final class FramebufferRender implements AutoCloseable {
 
     /**
      * El lado es el interno (puede ser el doble del de salida por el supermuestreo, T-019); el rango de salida lo valida
-     * el llamador. Lanza IllegalStateException con mensaje en español; no deja recursos a medias.
+     * el llamador. Lanza IllegalStateException con mensaje en inglés; no deja recursos a medias.
      */
     public FramebufferRender(int lado) {
         this.lado = lado;
         int max = maximoGpu();
-        if (lado > max) throw new IllegalStateException("Tu tarjeta gráfica no soporta " + lado
-                + " px (máximo " + max + " px). Elige una resolución menor.");
+        if (lado > max) throw new IllegalStateException("Your graphics card does not support " + lado
+                + " px (maximum " + max + " px). Choose a lower resolution.");
         while (GL11.glGetError() != GL11.GL_NO_ERROR) { } // limpiar errores ajenos antes de medir los nuestros
         try {
             fbo = new Framebuffer(lado, lado, true);
             int e = GL11.glGetError();
-            if (e != GL11.GL_NO_ERROR) throw new IllegalStateException("Error de OpenGL (0x" + Integer.toHexString(e)
-                    + ") al crear el framebuffer de " + lado + " px; posible falta de memoria de vídeo.");
+            if (e != GL11.GL_NO_ERROR) throw new IllegalStateException("OpenGL error (0x" + Integer.toHexString(e)
+                    + ") while creating the " + lado + " px framebuffer; possibly out of video memory.");
             fbo.bindFramebuffer(false);
             int st = GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER);
-            if (st != GL30.GL_FRAMEBUFFER_COMPLETE) throw new IllegalStateException("Framebuffer incompleto (0x"
-                    + Integer.toHexString(st) + ") a " + lado + " px; posible falta de memoria de vídeo.");
+            if (st != GL30.GL_FRAMEBUFFER_COMPLETE) throw new IllegalStateException("Incomplete framebuffer (0x"
+                    + Integer.toHexString(st) + ") at " + lado + " px; possibly out of video memory.");
         } catch (Throwable ex) { // incluye OutOfMemoryError: no dejar el FBO a medias
             close();
             throw ex;

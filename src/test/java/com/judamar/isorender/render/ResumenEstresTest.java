@@ -23,7 +23,7 @@ public class ResumenEstresTest {
         r.usadoTrasPrimero = 100L << 20; r.usadoDespues = 103L << 20;
         assertEquals(3.0, r.variacionPct(), 1e-9);
         assertEquals(3, r.lineas().length);
-        assertTrue(r.lineas()[0].contains("2 de 3"));
+        assertTrue(r.lineas()[0].contains("2 of 3"));
     }
 
     @Test public void sinDatosNoDivideEntreCero() {

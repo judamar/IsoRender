@@ -37,7 +37,7 @@ public class EstadoCamaraTest {
         e.fijarCorte("70");
         for (String mal : new String[] {"abc", "7.5", "99999999999"}) {
             try { e.fijarCorte(mal); fail(mal); }
-            catch (IllegalArgumentException ex) { assertEquals("Corte Y no válido: «" + mal + "». Escribe un número entero o déjalo vacío.", ex.getMessage()); }
+            catch (IllegalArgumentException ex) { assertEquals("Invalid cut Y: \"" + mal + "\". Enter an integer or leave it empty.", ex.getMessage()); }
         }
         assertEquals(Integer.valueOf(70), e.corteY());
     }
@@ -57,12 +57,12 @@ public class EstadoCamaraTest {
     }
 
     @Test public void sembrarYAConfiguracion() { // T-030
-        Configuracion base = new Configuracion("salidas", 1024, ParametrosCamara.crear(10, 20, 150, 0.1, -0.2, true), FondoVista.GRIS, 32);
+        Configuracion base = new Configuracion("salidas", 1024, ParametrosCamara.crear(10, 20, 150, 0.1, -0.2, true), FondoVista.GRAY, 32);
         EstadoCamara e = new EstadoCamara();
         e.sembrar(base);
         assertEquals(base.camara, e.actual());
         assertEquals(1024, e.resolucion());
-        assertEquals(FondoVista.GRIS, e.fondo());
+        assertEquals(FondoVista.GRAY, e.fondo());
         e.fijar(Parametro.ZOOM, 300);
         Configuracion c = e.aConfiguracion(base);
         assertEquals(300, c.camara.zoom, 0);

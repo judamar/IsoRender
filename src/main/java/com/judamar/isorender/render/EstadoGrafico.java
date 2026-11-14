@@ -133,7 +133,7 @@ public final class EstadoGrafico {
                 // Errores acumulados durante el render: se registran en consola y se limpian para no contaminar al juego.
                 for (int e = GL11.glGetError(); e != GL11.GL_NO_ERROR; e = GL11.glGetError()) {
                     if (error == 0) error = e;
-                    System.err.println("[IsoRender] Error de OpenGL pendiente tras el render: " + Fallos.nombreErrorGl(e));
+                    System.err.println("[IsoRender] Pending OpenGL error after the render: " + Fallos.nombreErrorGl(e));
                 }
             }
         } catch (Throwable t) { t.printStackTrace(); }

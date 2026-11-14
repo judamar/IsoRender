@@ -25,7 +25,7 @@ public class ArchivoConfiguracionTest {
 
     @Test public void validoModificado() throws Exception {
         File f = tmp.newFile("c.properties");
-        Files.write(f.toPath(), "resolucion=1024\ncarpetaSalida=ñandú\ntamanoMaximo=16\n".getBytes(StandardCharsets.UTF_8));
+        Files.write(f.toPath(), "resolution=1024\noutputFolder=ñandú\nmaxSize=16\n".getBytes(StandardCharsets.UTF_8));
         Configuracion c = ArchivoConfiguracion.cargar(f, log::add);
         assertEquals(1024, c.resolucion);
         assertEquals("ñandú", c.carpetaSalida);
@@ -35,10 +35,10 @@ public class ArchivoConfiguracionTest {
 
     @Test public void valorInvalidoVaAlLog() throws Exception {
         File f = tmp.newFile("c.properties");
-        Files.write(f.toPath(), "resolucion=99999\n".getBytes(StandardCharsets.UTF_8));
+        Files.write(f.toPath(), "resolution=99999\n".getBytes(StandardCharsets.UTF_8));
         assertEquals(Configuracion.POR_DEFECTO, ArchivoConfiguracion.cargar(f, log::add));
         assertEquals(1, log.size());
-        assertTrue(log.get(0).contains("resolucion"));
+        assertTrue(log.get(0).contains("resolution"));
     }
 
     @Test public void bytesBasura() throws Exception {

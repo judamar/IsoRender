@@ -9,7 +9,7 @@ import com.judamar.isorender.render.ResolucionSalida;
 public final class EstadoCamara {
     private ParametrosCamara actual = ParametrosCamara.POR_DEFECTO;
 
-    private FondoVista fondo = FondoVista.TABLERO;
+    private FondoVista fondo = FondoVista.CHECKERBOARD;
 
     private int resolucion = ResolucionSalida.POR_DEFECTO;
 
@@ -26,14 +26,14 @@ public final class EstadoCamara {
 
     public Integer corteY() { return corteY; }
 
-    /** Vacío o en blanco = sin corte; si no es un entero lanza IllegalArgumentException con mensaje en español. */
+    /** Vacío o en blanco = sin corte; si no es un entero lanza IllegalArgumentException con mensaje en inglés. */
     public void fijarCorte(String texto) {
         String t = texto == null ? "" : texto.trim();
         if (t.isEmpty()) { corteY = null; return; }
         try {
             corteY = Integer.valueOf(t);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Corte Y no válido: «" + t + "». Escribe un número entero o déjalo vacío.");
+            throw new IllegalArgumentException("Invalid cut Y: \"" + t + "\". Enter an integer or leave it empty.");
         }
     }
 

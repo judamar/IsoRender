@@ -33,7 +33,7 @@ public final class ArchivoConfiguracion {
                 return c;
             }
         } catch (Throwable e) {
-            log.accept("No se pudo leer " + archivo + " (" + e + "); se usan los valores por defecto.");
+            log.accept("Could not read " + archivo + " (" + e + "); using default values.");
             return Configuracion.POR_DEFECTO;
         }
     }
@@ -43,7 +43,7 @@ public final class ArchivoConfiguracion {
         try {
             File dir = archivo.getAbsoluteFile().getParentFile();
             if (dir != null && !dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory())
-                throw new java.io.IOException("no se pudo crear el directorio " + dir);
+                throw new java.io.IOException("could not create directory " + dir);
             File tmp = new File(dir, archivo.getName() + ".tmp");
             escribir(tmp, c);
             try {
@@ -53,7 +53,7 @@ public final class ArchivoConfiguracion {
                 tmp.delete();
             }
         } catch (Throwable e) {
-            log.accept("No se pudo guardar la configuración en " + archivo + " (" + e + ").");
+            log.accept("Could not save the configuration to " + archivo + " (" + e + ").");
         }
     }
 

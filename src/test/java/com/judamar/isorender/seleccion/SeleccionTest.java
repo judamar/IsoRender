@@ -47,9 +47,9 @@ public class SeleccionTest {
         assertEquals(Subcomando.POS2, Subcomando.parsear("/isorender pos2"));
         assertEquals(Subcomando.CLEAR, Subcomando.parsear("/isorender clear"));
         assertEquals(Subcomando.MENU, Subcomando.parsear("/isorender menu"));
-        assertEquals(Subcomando.PRUEBA_MULTI, Subcomando.parsear("/isorender prueba-multi"));
-        assertEquals(Subcomando.PRUEBA_MULTI, Subcomando.parsear("/isorender prueba-multi 6"));
-        assertEquals("6", Subcomando.argumento("/isorender prueba-multi 6"));
+        assertEquals(Subcomando.PRUEBA_MULTI, Subcomando.parsear("/isorender test-multi"));
+        assertEquals(Subcomando.PRUEBA_MULTI, Subcomando.parsear("/isorender test-multi 6"));
+        assertEquals("6", Subcomando.argumento("/isorender test-multi 6"));
         assertEquals(Subcomando.USO, Subcomando.parsear("/isorender menu 6"));
         assertEquals(Subcomando.USO, Subcomando.parsear("/isorender"));
         assertEquals(Subcomando.USO, Subcomando.parsear("/isorender foo"));

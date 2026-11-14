@@ -15,7 +15,7 @@ public final class NombreArchivo {
 
     /** reg = {minX,minY,minZ,maxX,maxY,maxZ}. Los negativos llevan «-»; las comas y el «-» son validos en cualquier sistema de archivos. */
     public static String base(LocalDateTime fechaHora, int[] reg) {
-        return "estructura_" + FECHA.format(fechaHora) + "_" + reg[0] + "," + reg[1] + "," + reg[2]
+        return "structure_" + FECHA.format(fechaHora) + "_" + reg[0] + "," + reg[1] + "," + reg[2]
                 + "_" + reg[3] + "," + reg[4] + "," + reg[5] + ".png";
     }
 

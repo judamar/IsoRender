@@ -6,10 +6,10 @@ import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.event.ClickEvent;
 
-/** T-027 (RF-027, RNF-011): único punto de salida al chat del jugador; todo con el prefijo [IsoRender] y en español. Nunca lanza. */
+/** T-027 (RF-027, RNF-011): único punto de salida al chat del jugador; todo con el prefijo [IsoRender] y en inglés. Nunca lanza. */
 public final class Chat {
     public static final String PREFIJO = "[IsoRender] ";
-    public static final String OCUPADO = "Ya hay un render en curso o pendiente; espera a que termine.";
+    public static final String OCUPADO = "A render is already running or pending; wait for it to finish.";
 
     private Chat() { }
 

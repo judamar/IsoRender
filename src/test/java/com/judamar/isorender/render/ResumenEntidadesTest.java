@@ -9,10 +9,10 @@ public class ResumenEntidadesTest {
         assertNull(ResumenEntidades.NINGUNA.avisoFallidas());
     }
     @Test public void avisosSingularYPlural() {
-        assertEquals("1 entidad de bloque dibujada", new ResumenEntidades(1, 0).avisoDibujadas());
-        assertEquals("3 entidades de bloque dibujadas", new ResumenEntidades(3, 0).avisoDibujadas());
-        assertEquals("1 entidad de bloque no se pudo dibujar y se omitió", new ResumenEntidades(2, 1).avisoFallidas());
-        assertEquals("2 entidades de bloque no se pudieron dibujar y se omitieron", new ResumenEntidades(0, 2).avisoFallidas());
+        assertEquals("1 block entity drawn", new ResumenEntidades(1, 0).avisoDibujadas());
+        assertEquals("3 block entities drawn", new ResumenEntidades(3, 0).avisoDibujadas());
+        assertEquals("1 block entity could not be drawn and was skipped", new ResumenEntidades(2, 1).avisoFallidas());
+        assertEquals("2 block entities could not be drawn and were skipped", new ResumenEntidades(0, 2).avisoFallidas());
     }
     @Test public void regionSoloConEntidadesNoEstaVacia() {
         assertTrue(new ResumenGeometria(0, 0, 0).vacio());
@@ -25,13 +25,13 @@ public class ResumenEntidadesTest {
         assertNull(ResumenEntidades.decorativas(0, 0).avisoFallidas());
     }
     @Test public void decorativasSingularYPlural() {
-        assertEquals("1 entidad decorativa dibujada", ResumenEntidades.decorativas(1, 0).avisoDibujadas());
-        assertEquals("4 entidades decorativas dibujadas", ResumenEntidades.decorativas(4, 0).avisoDibujadas());
-        assertEquals("1 entidad decorativa no se pudo dibujar y se omitió", ResumenEntidades.decorativas(2, 1).avisoFallidas());
-        assertEquals("3 entidades decorativas no se pudieron dibujar y se omitieron", ResumenEntidades.decorativas(0, 3).avisoFallidas());
+        assertEquals("1 decorative entity drawn", ResumenEntidades.decorativas(1, 0).avisoDibujadas());
+        assertEquals("4 decorative entities drawn", ResumenEntidades.decorativas(4, 0).avisoDibujadas());
+        assertEquals("1 decorative entity could not be drawn and was skipped", ResumenEntidades.decorativas(2, 1).avisoFallidas());
+        assertEquals("3 decorative entities could not be drawn and were skipped", ResumenEntidades.decorativas(0, 3).avisoFallidas());
     }
     @Test public void constructorAntiguoConservaTextoDeBloque() {
-        assertTrue(new ResumenEntidades(2, 1).avisoDibujadas().contains("entidades de bloque"));
-        assertTrue(new ResumenEntidades(1, 1).avisoFallidas().contains("entidad de bloque"));
+        assertTrue(new ResumenEntidades(2, 1).avisoDibujadas().contains("block entities"));
+        assertTrue(new ResumenEntidades(1, 1).avisoFallidas().contains("block entity"));
     }
 }

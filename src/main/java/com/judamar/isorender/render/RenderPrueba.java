@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
@@ -30,7 +31,7 @@ import org.lwjgl.opengl.GL11;
 public final class RenderPrueba {
     private RenderPrueba() { }
 
-    /** T-022: un solo render a la vez (prueba, prueba-multi y estres comparten la guardia; el estres la retiene entre frames). */
+    /** T-022: un solo render a la vez (test, test-multi y stress comparten la guardia; el estres la retiene entre frames). */
     private static final Guardia GUARDIA = new Guardia();
     /** Errores de OpenGL detectados al terminar cada dibujo (acumulado; el estres lo lee). Solo hilo de render. */
     private static int erroresGl;
@@ -43,26 +44,26 @@ public final class RenderPrueba {
     /** True si hay un render (o un estres) en curso. */
     public static boolean ocupado() { return GUARDIA.ocupada(); }
 
-    /** Argumento de "/isorender prueba-multi [n]": entero 2-8; vacío = 4. Lanza IllegalArgumentException en español. */
+    /** Argumento de "/isorender test-multi [n]": entero 2-8; vacío = 4. Lanza IllegalArgumentException en inglés. */
     public static int parsearN(String arg) { return GeometriaRegion.parsearN(arg); }
 
     private static void chat(Minecraft mc, String s) { Chat.decir(mc, s); }
 
     private static void avisosGeometria(Minecraft mc, GeometriaCacheada geo) {
-        if (geo.fallidos() > 0) chat(mc, geo.fallidos() + " bloques no se pudieron dibujar y se omitieron");
+        if (geo.fallidos() > 0) chat(mc, geo.fallidos() + (geo.fallidos() == 1 ? " block could not be drawn and was skipped" : " blocks could not be drawn and were skipped"));
     }
 
     /** T-021 y T-044: cuántas entidades (de bloque o decorativas) se dibujaron y aviso (CA-013.2) de las que se omitieron. */
     private static void avisosEntidades(Minecraft mc, ResumenEntidades e) {
         if (e.avisoDibujadas() != null) chat(mc, e.avisoDibujadas());
-        if (e.avisoFallidas() != null) chat(mc, "Aviso: " + e.avisoFallidas());
+        if (e.avisoFallidas() != null) chat(mc, "Warning: " + e.avisoFallidas());
     }
 
     private static void guardar(BufferedImage img, File out) throws IOException { ConversorImagen.guardarPng(img, out); }
 
     /**
      * T-022 (RNF-014): lee la geometria solo si la memoria alcanza (con un GC previo si no); si no, rechaza con mensaje
-     * en español en vez de arriesgar un OutOfMemoryError. Si aun asi falta memoria, el OOM lo informa el llamador.
+     * en inglés en vez de arriesgar un OutOfMemoryError. Si aun asi falta memoria, el OOM lo informa el llamador.
      */
     public static GeometriaCacheada construirControlado(Minecraft mc, int[] reg) {
         long vol = GeometriaRegion.volumen(reg);
@@ -78,17 +79,17 @@ public final class RenderPrueba {
     /** T-028/T-030: carpeta de exportacion segun la configuracion (vacia = isorender dentro del directorio del juego). */
     static File carpetaSalida(Minecraft mc) { return Ajustes.resolverCarpeta(Ajustes.actual().carpetaSalida, mc.mcDataDir); }
 
-    /** Prueba (/isorender prueba): PNG en isorender-test con el nombre de siempre. Debe llamarse desde el hilo de render. Nunca lanza. */
+    /** Prueba (/isorender test): PNG en isorender-test con el nombre de siempre. Debe llamarse desde el hilo de render. Nunca lanza. */
     public static void ejecutar(Minecraft mc, int[] reg, int res, ParametrosCamara cam) {
         File dir = new File(mc.mcDataDir, "isorender-test");
-        render(mc, reg, res, cam, "Prueba lista", "renderizar la prueba",
-                () -> new File(dir, "prueba-" + res + "-" + System.currentTimeMillis() + ".png"));
+        render(mc, reg, res, cam, "Test render saved", "rendering the test",
+                () -> new File(dir, "test-" + res + "-" + System.currentTimeMillis() + ".png"));
     }
 
     /** T-028 (RF-024/RF-026): exportacion real a carpetaSalida con nombre unico estructura_<fecha>_<coords>.png. */
     public static void exportar(Minecraft mc, int[] reg, int res, ParametrosCamara cam) {
         File dir = carpetaSalida(mc);
-        render(mc, reg, res, cam, "Render listo", "exportar el render", () -> new File(dir,
+        render(mc, reg, res, cam, "Render saved", "exporting the render", () -> new File(dir,
                 NombreArchivo.unico(NombreArchivo.base(LocalDateTime.now(), reg), n -> new File(dir, n).exists())));
     }
 
@@ -105,9 +106,9 @@ public final class RenderPrueba {
             String base = NombreArchivo.baseItem(LocalDateTime.now(), String.valueOf(Item.REGISTRY.getNameForObject(stack.getItem())), stack.getMetadata());
             File out = new File(dir, NombreArchivo.unico(base, n -> new File(dir, n).exists()));
             guardar(img, out);
-            Chat.archivo(mc, "Ítem listo " + res + "x" + res + " px en ", out, " [" + (System.currentTimeMillis() - t0) + " ms]");
+            Chat.archivo(mc, "Item render saved (" + res + "x" + res + " px): ", out, " [" + (System.currentTimeMillis() - t0) + " ms]");
         } catch (Throwable e) {
-            Fallos.informar(mc, "renderizar el ítem", e);
+            Fallos.informar(mc, "rendering the item", e);
         } finally {
             GUARDIA.salir();
         }
@@ -173,7 +174,7 @@ public final class RenderPrueba {
                 avisosEntidades(mc, geo.ultimasEntidades()); avisosEntidades(mc, geo.ultimasDecorativas());
                 File out = destino.get();
                 guardar(img, out);
-                Chat.archivo(mc, exito + " " + res + "x" + res + " px (" + geo.bloques() + " bloques) en ", out,
+                Chat.archivo(mc, exito + " (" + res + "x" + res + " px, " + geo.bloques() + " blocks): ", out,
                         " [" + (System.currentTimeMillis() - t0) + " ms]");
             }
         } catch (Throwable e) {
@@ -208,12 +209,12 @@ public final class RenderPrueba {
                     guardar(img, new File(dir, "multi-" + marca + "-" + (i + 1) + "of" + n + "-rot" + Math.round(rot) + ".png"));
                 }
                 avisosEntidades(mc, geo.ultimasEntidades()); avisosEntidades(mc, geo.ultimasDecorativas());
-                chat(mc, n + " imágenes de " + res + "x" + res + " px (" + geo.bloques() + " bloques) en " + dir.getPath());
-                chat(mc, String.format("Construcción de geometría: %.1f ms (una vez). Dibujo medio por imagen: %.1f ms.",
+                chat(mc, n + " images of " + res + "x" + res + " px (" + geo.bloques() + " blocks) saved to " + dir.getPath());
+                chat(mc, String.format(Locale.ROOT, "Geometry build: %.1f ms (once). Average draw time per image: %.1f ms.",
                         construccion / 1e6, totalDibujo / 1e6 / n));
             }
         } catch (Throwable e) {
-            Fallos.informar(mc, "renderizar la prueba", e);
+            Fallos.informar(mc, "rendering the test", e);
         } finally {
             GUARDIA.salir();
         }
@@ -245,16 +246,16 @@ public final class RenderPrueba {
         String err = ResolucionSalida.validar(res);
         if (err != null) throw new IllegalArgumentException(err);
         int factor = ResolucionSalida.factorSupermuestreo(res, FramebufferRender.maximoGpu());
-        if (factor == 1) aviso.accept("Aviso: tu GPU no admite supermuestreo a " + res + " px; los bordes saldrán sin suavizar.");
+        if (factor == 1) aviso.accept("Warning: your GPU does not support supersampling at " + res + " px; edges will not be smoothed.");
         int seguro = factorSeguro(res, factor);
-        if (seguro < factor) aviso.accept("Aviso: poca memoria para el supermuestreo a " + res + " px; se dibuja sin suavizado de bordes.");
+        if (seguro < factor) aviso.accept("Warning: low memory for supersampling at " + res + " px; drawing without edge smoothing.");
         factor = seguro;
         try {
             return aImagen(mc, res, factor, aviso, escena);
         } catch (IllegalStateException | OutOfMemoryError e) {
             if (factor == 1) throw e;
-            String causa = e instanceof OutOfMemoryError ? "memoria insuficiente" : e.getMessage();
-            aviso.accept("Aviso: no hay memoria para el supermuestreo (" + causa + ") Se repite sin suavizado de bordes.");
+            String causa = e instanceof OutOfMemoryError ? "out of memory" : e.getMessage();
+            aviso.accept("Warning: not enough memory for supersampling (" + causa + "). Retrying without edge smoothing.");
             return aImagen(mc, res, 1, aviso, escena);
         }
     }
@@ -326,7 +327,7 @@ public final class RenderPrueba {
         FramebufferRender fbo = null;
         try {
             // Render fuera de pantalla: aislar estado GL.
-            fbo = new FramebufferRender(res * factor); // lado interno; valida límites de GPU; lanza con mensaje en español
+            fbo = new FramebufferRender(res * factor); // lado interno; valida límites de GPU; lanza con mensaje en inglés
 
             fbo.enlazarYLimpiar(); // viewport res x res; limpia con alfa 0 y profundidad
 
@@ -349,7 +350,7 @@ public final class RenderPrueba {
             int glError = previo.restaurar(); // vuelve al estado PREVIO real y limpia glGetError
             if (glError != 0) {
                 erroresGl++;
-                aviso.accept("Aviso: OpenGL informó un error (" + Fallos.nombreErrorGl(glError) + ") durante el render; ya se limpió.");
+                aviso.accept("Warning: OpenGL reported an error (" + Fallos.nombreErrorGl(glError) + ") during the render; it has been cleared.");
             }
         }
     }

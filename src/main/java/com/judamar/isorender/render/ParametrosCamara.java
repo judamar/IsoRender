@@ -29,17 +29,17 @@ public final class ParametrosCamara {
         return new ParametrosCamara(rotacion, elevacion, zoom, despX, despY, persp);
     }
 
-    /** Rechaza valores fuera de rango (comando); el mensaje en español incluye el rango. */
+    /** Rechaza valores fuera de rango (comando); el mensaje en inglés incluye el rango. */
     public static ParametrosCamara crear(double rot, double elev, double zoom, double dx, double dy) {
         return crear(rot, elev, zoom, dx, dy, false);
     }
 
     public static ParametrosCamara crear(double rot, double elev, double zoom, double dx, double dy, boolean persp) {
-        comprobar("Rotación", rot, ROT_MIN, ROT_MAX, "°");
-        comprobar("Elevación", elev, ELEV_MIN, ELEV_MAX, "°");
-        comprobar("Zoom", zoom, ZOOM_MIN, ZOOM_MAX, " %");
-        comprobar("Desplazamiento X", dx * 100, -DESP_MAX * 100, DESP_MAX * 100, " %");
-        comprobar("Desplazamiento Y", dy * 100, -DESP_MAX * 100, DESP_MAX * 100, " %");
+        comprobar("Rotation", rot, ROT_MIN, ROT_MAX, "°");
+        comprobar("Elevation", elev, ELEV_MIN, ELEV_MAX, "°");
+        comprobar("Zoom", zoom, ZOOM_MIN, ZOOM_MAX, "%");
+        comprobar("Offset X", dx * 100, -DESP_MAX * 100, DESP_MAX * 100, "%");
+        comprobar("Offset Y", dy * 100, -DESP_MAX * 100, DESP_MAX * 100, "%");
         return new ParametrosCamara(rot, elev, zoom, dx, dy, persp);
     }
 
@@ -54,19 +54,19 @@ public final class ParametrosCamara {
                 Math.max(-DESP_MAX, Math.min(DESP_MAX, dy)), persp);
     }
 
-    /** Argumentos de "/isorender prueba": [rotación] [elevación] [zoom %] [iso|persp]; vacíos = por defecto. */
+    /** Argumentos de "/isorender test": [rotación] [elevación] [zoom %] [iso|persp]; vacíos = por defecto. */
     public static ParametrosCamara parsear(String[] t) {
         double[] v = {POR_DEFECTO.rotacion, POR_DEFECTO.elevacion, POR_DEFECTO.zoom};
-        String[] nom = {"Rotación", "Elevación", "Zoom"};
+        String[] nom = {"Rotation", "Elevation", "Zoom"};
         for (int i = 0; i < 3 && i < t.length; i++) {
             try { v[i] = Double.parseDouble(t[i].replace(',', '.')); }
-            catch (NumberFormatException e) { throw new IllegalArgumentException(nom[i] + " no válida: «" + t[i] + "». Usa un número."); }
+            catch (NumberFormatException e) { throw new IllegalArgumentException(nom[i] + " is not a valid number: \"" + t[i] + "\"."); }
         }
         boolean persp = false;
         if (t.length > 3) {
             String s = t[3].trim().toLowerCase();
             if (s.equals("persp")) persp = true;
-            else if (!s.equals("iso")) throw new IllegalArgumentException("Vista no válida: «" + t[3] + "». Usa iso o persp.");
+            else if (!s.equals("iso")) throw new IllegalArgumentException("Invalid view: \"" + t[3] + "\". Use iso or persp.");
         }
         return crear(v[0], v[1], v[2], 0, 0, persp);
     }
@@ -85,7 +85,7 @@ public final class ParametrosCamara {
 
     private static void comprobar(String n, double v, double min, double max, String u) {
         if (!(v >= min && v <= max)) // también rechaza NaN
-            throw new IllegalArgumentException(n + " fuera de rango: " + v + u + ". Debe estar entre " + min + u + " y " + max + u + ".");
+            throw new IllegalArgumentException(n + " out of range: " + v + u + ". Must be between " + min + u + " and " + max + u + ".");
     }
 
     /**

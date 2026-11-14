@@ -4,11 +4,11 @@ import com.judamar.isorender.render.ParametrosCamara;
 
 /** T-024: un ajuste de cámara del menú (lógica pura). Desplazamiento en %, igual que en pantalla; ParametrosCamara lo guarda como fracción. */
 public enum Parametro {
-    ROTACION("Rotación", "°", ParametrosCamara.ROT_MIN, ParametrosCamara.ROT_MAX),
-    ELEVACION("Elevación", "°", ParametrosCamara.ELEV_MIN, ParametrosCamara.ELEV_MAX),
-    ZOOM("Zoom", " %", ParametrosCamara.ZOOM_MIN, ParametrosCamara.ZOOM_MAX),
-    DESP_X("Desp. X", " %", -ParametrosCamara.DESP_MAX * 100, ParametrosCamara.DESP_MAX * 100),
-    DESP_Y("Desp. Y", " %", -ParametrosCamara.DESP_MAX * 100, ParametrosCamara.DESP_MAX * 100);
+    ROTACION("Rotation", "°", ParametrosCamara.ROT_MIN, ParametrosCamara.ROT_MAX),
+    ELEVACION("Elevation", "°", ParametrosCamara.ELEV_MIN, ParametrosCamara.ELEV_MAX),
+    ZOOM("Zoom", "%", ParametrosCamara.ZOOM_MIN, ParametrosCamara.ZOOM_MAX),
+    DESP_X("Offset X", "%", -ParametrosCamara.DESP_MAX * 100, ParametrosCamara.DESP_MAX * 100),
+    DESP_Y("Offset Y", "%", -ParametrosCamara.DESP_MAX * 100, ParametrosCamara.DESP_MAX * 100);
 
     public final String etiqueta, unidad;
     public final double min, max;
@@ -46,22 +46,22 @@ public enum Parametro {
     /** Valor de una posición 0..1 del deslizador, redondeado a entero. */
     public double deFraccion(double f) { return Math.rint(min + Math.max(0, Math.min(1, f)) * (max - min)); }
 
-    /** Texto con coma decimal y un decimal como máximo: «35,3». */
+    /** Texto con punto decimal y un decimal como máximo: «35.3». */
     public static String formato(double v) {
         double r = Math.rint(v * 10) / 10;
-        return r == Math.rint(r) ? String.valueOf((long) r) : String.valueOf(r).replace('.', ',');
+        return r == Math.rint(r) ? String.valueOf((long) r) : String.valueOf(r);
     }
 
     public String conUnidad(double v) { return formato(v) + unidad; }
 
-    /** Interpreta lo escrito en el campo numérico (CA-023.2): lanza IllegalArgumentException en español si no es un número. */
+    /** Interpreta lo escrito en el campo numérico (CA-023.2): lanza IllegalArgumentException en inglés si no es un número. */
     public double leer(String texto) {
         try {
             double v = Double.parseDouble(texto.trim().replace(',', '.'));
             if (Double.isNaN(v) || Double.isInfinite(v)) throw new NumberFormatException();
             return v;
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException(etiqueta + " no válido: «" + texto.trim() + "». Escribe un número.");
+            throw new IllegalArgumentException(etiqueta + " is not a valid number: \"" + texto.trim() + "\".");
         }
     }
 }

@@ -39,7 +39,7 @@ public final class VistaPrevia implements AutoCloseable {
 
     public void dibujar(Minecraft mc, Seleccion sel, ParametrosCamara cam, FondoVista fondo, int x, int y, int lado, int escala, Integer corteY) {
         int[] reg = GeometriaRegion.recortar(sel.region(), corteY); // T-043: la vista solo ve la caja recortada
-        if (fondo == FondoVista.TABLERO) tablero(x, y, lado); else Gui.drawRect(x, y, x + lado, y + lado, fondo.argb);
+        if (fondo == FondoVista.CHECKERBOARD) tablero(x, y, lado); else Gui.drawRect(x, y, x + lado, y + lado, fondo.argb);
         try {
             actualizar(mc, sel, reg, cam, lado, escala);
         } catch (Throwable e) { // RNF-005: la vista previa falla sola; el menú sigue abierto
@@ -53,7 +53,7 @@ public final class VistaPrevia implements AutoCloseable {
             return;
         }
         if (simplificado) {
-            String s = "Vista simplificada (región grande)";
+            String s = "Simplified view (large region)";
             mc.fontRenderer.drawString(s, x + (lado - mc.fontRenderer.getStringWidth(s)) / 2, y + lado + 2, 0xAAAAAA);
         }
     }
@@ -76,8 +76,8 @@ public final class VistaPrevia implements AutoCloseable {
         }
         if (geo != null && !geo.valida(reg)) preparar();
         if (estado == Estado.PREPARANDO) {
-            if (geo == null && RenderPrueba.ocupado()) { motivo = "Hay un render en curso; la vista previa espera."; return; }
-            if (pendiente) { pendiente = false; motivo = "Preparando vista previa…"; return; } // un frame solo con el texto
+            if (geo == null && RenderPrueba.ocupado()) { motivo = "A render is in progress; the preview is waiting."; return; }
+            if (pendiente) { pendiente = false; motivo = "Preparing preview…"; return; } // un frame solo con el texto
             geo = RenderPrueba.construirControlado(mc, reg); // incluye la comprobación de memoria (RNF-014)
             simplificado = VistaPreviaCalculo.simplificado(GeometriaRegion.volumen(reg));
             sucio = true; ordenPendiente = false;
@@ -108,8 +108,8 @@ public final class VistaPrevia implements AutoCloseable {
             int e = previo.restaurar();
             if (e != 0 && !avisadoGl) {
                 avisadoGl = true;
-                if (mc.player != null) mc.player.sendMessage(new TextComponentString("[IsoRender] Aviso: OpenGL informó un error ("
-                        + Fallos.nombreErrorGl(e) + ") en la vista previa; ya se limpió."));
+                if (mc.player != null) mc.player.sendMessage(new TextComponentString("[IsoRender] Warning: OpenGL reported an error ("
+                        + Fallos.nombreErrorGl(e) + ") in the preview; it has been cleared."));
             }
         }
     }
@@ -165,12 +165,12 @@ public final class VistaPrevia implements AutoCloseable {
             f.drawString(lineas.get(i), x + (lado - f.getStringWidth(lineas.get(i))) / 2, y0 + i * f.FONT_HEIGHT, 0xFFFFFF);
     }
 
-    private void preparar() { liberarGeo(); estado = Estado.PREPARANDO; pendiente = true; motivo = "Preparando vista previa…"; }
+    private void preparar() { liberarGeo(); estado = Estado.PREPARANDO; pendiente = true; motivo = "Preparing preview…"; }
 
     private void fallar(Throwable e, int[] reg, ParametrosCamara cam) {
         try { e.printStackTrace(); } catch (Throwable ignorado) { }
         liberar();
-        estado = Estado.ERROR; motivo = Fallos.mensaje(e, "la vista previa"); regError = reg; camError = cam;
+        estado = Estado.ERROR; motivo = Fallos.mensaje(e, "rendering the preview"); regError = reg; camError = cam;
     }
 
     private void liberarGeo() { if (geo != null) { geo.close(); geo = null; } camPintada = null; }

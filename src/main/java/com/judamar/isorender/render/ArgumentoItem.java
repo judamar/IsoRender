@@ -7,20 +7,20 @@ public final class ArgumentoItem {
 
     private ArgumentoItem(String id, int meta) { this.id = id; this.meta = meta; }
 
-    /** Vacio = mano; "id" o "id meta" (meta entero 0..32767). Lanza IllegalArgumentException con mensaje en español. */
+    /** Vacio = mano; "id" o "id meta" (meta entero 0..32767). Lanza IllegalArgumentException con mensaje en inglés. */
     public static ArgumentoItem parsear(String arg) {
         String t = arg == null ? "" : arg.trim();
         if (t.isEmpty()) return new ArgumentoItem(null, 0);
         String[] a = t.split("\\s+");
-        if (a.length > 2) throw new IllegalArgumentException("Demasiados argumentos. Uso: /isorender item [id] [meta]");
+        if (a.length > 2) throw new IllegalArgumentException("Too many arguments. Usage: /isorender item [id] [meta]");
         int meta = 0;
         if (a.length == 2) {
             try {
                 meta = Integer.parseInt(a[1]);
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Metadata no válida: «" + a[1] + "». Usa un entero entre 0 y 32767.");
+                throw new IllegalArgumentException("Invalid metadata: \"" + a[1] + "\". Use an integer between 0 and 32767.");
             }
-            if (meta < 0 || meta > 32767) throw new IllegalArgumentException("Metadata fuera de rango: " + meta + ". Debe estar entre 0 y 32767.");
+            if (meta < 0 || meta > 32767) throw new IllegalArgumentException("Metadata out of range: " + meta + ". Must be between 0 and 32767.");
         }
         return new ArgumentoItem(a[0], meta);
     }

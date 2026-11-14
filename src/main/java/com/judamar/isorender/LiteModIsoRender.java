@@ -36,7 +36,7 @@ import org.lwjgl.input.Keyboard;
 /** Clase de entrada. T-009: saludo en el chat. T-010/T-023: tecla K y /isorender menu abren el menú. */
 public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, RenderListener, PostRenderListener {
     private final com.judamar.isorender.render.ContornoSeleccion contorno = new com.judamar.isorender.render.ContornoSeleccion();
-    private final KeyBinding teclaMenu = new KeyBinding("Abrir menú IsoRender", Keyboard.KEY_K, "IsoRender");
+    private final KeyBinding teclaMenu = new KeyBinding("Open IsoRender menu", Keyboard.KEY_K, "IsoRender");
     private final Seleccion seleccion = new Seleccion();
     private final com.judamar.isorender.menu.EstadoCamara camara = new com.judamar.isorender.menu.EstadoCamara();
     private static final org.apache.logging.log4j.Logger LOG = org.apache.logging.log4j.LogManager.getLogger("IsoRender");
@@ -45,7 +45,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
     private boolean saludado;
     /** El filtro de chat corre dentro de sendChatMessage: la pantalla se abre en el siguiente tick. */
     private volatile boolean abrirMenu;
-    /** T-011/T-018/T-022: el render pedido (prueba, prueba-multi, estres) se ejecuta en el siguiente frame, dentro de onRender. Un solo hueco: no se solapan. */
+    /** T-011/T-018/T-022: el render pedido (test, test-multi, stress) se ejecuta en el siguiente frame, dentro de onRender. Un solo hueco: no se solapan. */
     private volatile Subcomando pendiente;
     /** T-026: render pedido por el botón Renderizar o /isorender render; onRender lo procesa en el frame siguiente. */
     private volatile boolean renderMenu;
@@ -62,13 +62,13 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         LiteLoader.getInput().registerKeyBinding(teclaMenu);
         try {
             archivoConfig = new File(configPath, "isorender.properties");
-            LOG.info("Configuración en " + archivoConfig.getAbsolutePath());
+            LOG.info("Configuration at " + archivoConfig.getAbsolutePath());
             Configuracion c = ArchivoConfiguracion.cargar(archivoConfig, LOG::warn); // crea el archivo si falta; avisos al log, no al chat
             Ajustes.actual(c);
             camara.sembrar(c);
             ultimoGuardado = c;
         } catch (Throwable e) {
-            LOG.warn("No se pudo cargar la configuración; se usan los valores por defecto.", e); // RNF-005
+            LOG.warn("Could not load the configuration; using default values.", e); // RNF-005
         }
     }
 
@@ -86,7 +86,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         if (!inGame || mc.player == null) { saludado = false; return; }
         if (!saludado) {
             saludado = true;
-            mc.player.sendMessage(new TextComponentString("[IsoRender] Mod cargado (v" + getVersion() + ")."));
+            mc.player.sendMessage(new TextComponentString("[IsoRender] Mod loaded (v" + getVersion() + ")."));
         }
         // isPressed() se consume siempre para no acumular pulsaciones
         boolean tecla = teclaMenu.isPressed();
@@ -94,7 +94,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         abrirMenu = false;
         if (abrir) {
             try { mc.displayGuiScreen(new PantallaMenu(seleccion, camara, this::pedirRenderMenu, this::guardarConfiguracion)); }
-            catch (Throwable e) { Fallos.informar(mc, "abrir el menú", e); } // RNF-005: un fallo del menu no cierra el juego
+            catch (Throwable e) { Fallos.informar(mc, "opening the menu", e); } // RNF-005: un fallo del menu no cierra el juego
         }
     }
 
@@ -116,12 +116,12 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
                     break;
                 case POS1: case POS2: fijarPunto(mc, sub == Subcomando.POS1); break;
                 case CLEAR:
-                    decir(mc, seleccion.limpiar() ? "Selección borrada." : "No había ninguna selección.");
+                    decir(mc, seleccion.limpiar() ? "Selection cleared." : "There was no selection to clear.");
                     break;
-                default: decir(mc, "Uso: /isorender pos1 | pos2 | clear | menu | render | prueba [lado 512-4096] [rotación 0-359] [elevación 5-90] [zoom 25-400] [vista iso|persp] | prueba-multi [n 2-8] | estres [n 1-50] | item [id] [meta]");
+                default: decir(mc, "Usage: /isorender pos1 | pos2 | clear | menu | render | test [size 512-4096] [rotation 0-359] [elevation 5-90] [zoom 25-400] [view iso|persp] | test-multi [n 2-8] | stress [n 1-50] | item [id] [meta]");
             }
         } catch (Throwable e) {
-            Fallos.informar(mc, "procesar el comando", e); // RNF-005
+            Fallos.informar(mc, "processing the command", e); // RNF-005
         }
         return false;
     }
@@ -137,16 +137,16 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         RayTraceResult r = mc.objectMouseOver;
         if (r != null && r.typeOfHit == RayTraceResult.Type.BLOCK) {
             BlockPos b = r.getBlockPos();
-            x = b.getX(); y = b.getY(); z = b.getZ(); origen = "bloque apuntado";
+            x = b.getX(); y = b.getY(); z = b.getZ(); origen = "targeted block";
         } else {
             // [SUPUESTO] "donde está de pie" = bloque sobre el que se apoya el jugador
             x = MathHelper.floor(mc.player.posX); y = MathHelper.floor(mc.player.posY) - 1; z = MathHelper.floor(mc.player.posZ);
-            origen = "no apuntas a ningún bloque; se usa el bloque donde estás de pie";
+            origen = "you are not looking at a block; using the block you are standing on";
         }
         if (primero) seleccion.fijarPunto1(x, y, z); else seleccion.fijarPunto2(x, y, z);
-        decir(mc, "Punto " + (primero ? 1 : 2) + " fijado en (" + x + ", " + y + ", " + z + ") [" + origen + "].");
+        decir(mc, "Point " + (primero ? 1 : 2) + " set at (" + x + ", " + y + ", " + z + ") [" + origen + "].");
         int[] d = seleccion.dimensiones();
-        if (d != null) decir(mc, "Región: " + d[0] + " × " + d[1] + " × " + d[2] + " bloques.");
+        if (d != null) decir(mc, "Region: " + d[0] + " × " + d[1] + " × " + d[2] + " blocks.");
     }
 
     private void pedirRenderMenu() { renderMenu = true; }
@@ -164,7 +164,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
             // T-043 (RF-015): exporta la región recortada por el corte de altura del menú (el nombre de archivo usa la caja recortada)
             RenderPrueba.exportar(mc, RenderPrueba.regionConCorte(seleccion.region(), camara.corteY()), camara.resolucion(), camara.actual());
         } catch (Throwable e) {
-            Fallos.informar(mc, "preparar el render", e); // RNF-005
+            Fallos.informar(mc, "preparing the render", e); // RNF-005
         }
     }
 
@@ -181,7 +181,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
             if (sub == Subcomando.ITEM) { renderItem(mc); return; } // T-042: no usa region ni seleccion
             int lado = 0, n = 0;
             ParametrosCamara cam = null;
-            // Argumentos invalidos: IllegalArgumentException con mensaje en español (CA-025.2: sin archivo)
+            // Argumentos invalidos: IllegalArgumentException con mensaje en inglés (CA-025.2: sin archivo)
             if (sub == Subcomando.PRUEBA_MULTI) n = RenderPrueba.parsearN(pruebaArg);
             else if (sub == Subcomando.PRUEBA) {
                 String[] a = pruebaArg.trim().isEmpty() ? new String[0] : pruebaArg.trim().split("\\s+");
@@ -194,25 +194,25 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
             else if (sub == Subcomando.PRUEBA) RenderPrueba.ejecutar(mc, seleccion.region(), lado, cam);
             else estres = Estres.iniciar(mc, seleccion.region(), pruebaArg);
         } catch (Throwable e) {
-            Fallos.informar(mc, "preparar el render", e); // RNF-005: nunca cierra el juego ni vuelca la traza al chat
+            Fallos.informar(mc, "preparing the render", e); // RNF-005: nunca cierra el juego ni vuelca la traza al chat
         }
     }
 
     /** T-042 (RF-030): item de la mano (la secundaria si la principal esta vacia) o item/bloque por ID y metadata. Solo lectura. */
     private void renderItem(Minecraft mc) {
-        ArgumentoItem a = ArgumentoItem.parsear(pruebaArg); // IllegalArgumentException en español: lo informa onRender, sin archivo
+        ArgumentoItem a = ArgumentoItem.parsear(pruebaArg); // IllegalArgumentException en inglés: lo informa onRender, sin archivo
         ItemStack stack;
         if (a.id == null) {
             stack = mc.player.getHeldItemMainhand();
             if (stack.isEmpty()) stack = mc.player.getHeldItemOffhand(); // [SUPUESTO]
-            if (stack.isEmpty()) { decir(mc, "No tienes ningún ítem en la mano."); return; }
+            if (stack.isEmpty()) { decir(mc, "You are not holding any item."); return; }
             stack = stack.copy(); // nunca se toca el del inventario
         } else {
             Item item = Item.getByNameOrId(a.id);
             if (item == null || item == Items.AIR) {
                 Block b = Block.getBlockFromName(a.id);
-                decir(mc, b != null && b != Blocks.AIR ? "El bloque «" + a.id + "» no tiene forma de ítem y no se puede renderizar."
-                        : "No existe el ítem o bloque «" + a.id + "».");
+                decir(mc, b != null && b != Blocks.AIR ? "The block \"" + a.id + "\" has no item form and cannot be rendered."
+                        : "Unknown item or block \"" + a.id + "\".");
                 return;
             }
             stack = new ItemStack(item, 1, a.meta);
@@ -225,7 +225,7 @@ public class LiteModIsoRender implements LiteMod, Tickable, OutboundChatFilter, 
         try {
             if (estres.paso(mc)) estres = null;
         } catch (Throwable e) {
-            Fallos.informar(mc, "ejecutar el estrés", e);
+            Fallos.informar(mc, "running the stress test", e);
             estres.cerrar();
             estres = null;
         }

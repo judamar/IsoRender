@@ -50,7 +50,7 @@ public final class ContornoSeleccion {
             desactivado = true;
             t.printStackTrace();
             if (mc.player != null) mc.player.sendMessage(new TextComponentString(
-                "[IsoRender] Error al dibujar el contorno; se desactiva hasta reiniciar el juego: " + t));
+                "[IsoRender] Error drawing the selection outline; disabled until the game restarts: " + t));
         } finally {
             if (previo != null) previo.restaurar();
         }

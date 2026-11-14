@@ -46,7 +46,7 @@ public class ParametrosCamaraTest {
         double[][] malos = {{-1, 45, 100, 0, 0}, {360, 45, 100, 0, 0}, {0, 4.9, 100, 0, 0}, {0, 90.1, 100, 0, 0},
                 {0, 45, 24, 0, 0}, {0, 45, 401, 0, 0}, {0, 45, 100, 1.01, 0}, {0, 45, 100, 0, -1.01}, {Double.NaN, 45, 100, 0, 0}};
         for (double[] m : malos)
-            try { ParametrosCamara.crear(m[0], m[1], m[2], m[3], m[4]); fail(); } catch (IllegalArgumentException e) { assertTrue(e.getMessage().contains("entre")); }
+            try { ParametrosCamara.crear(m[0], m[1], m[2], m[3], m[4]); fail(); } catch (IllegalArgumentException e) { assertTrue(e.getMessage().contains("between")); }
         ParametrosCamara.crear(0, 5, 25, -1, 1); ParametrosCamara.crear(359, 90, 400, 1, -1);
     }
 
@@ -124,6 +124,6 @@ public class ParametrosCamaraTest {
         assertTrue(ParametrosCamara.parsear(new String[] {"45", "35", "100", "persp"}).perspectiva);
         assertFalse(ParametrosCamara.parsear(new String[] {"45", "35", "100", "iso"}).perspectiva);
         try { ParametrosCamara.parsear(new String[] {"45", "35", "100", "otra"}); fail(); }
-        catch (IllegalArgumentException e) { assertTrue(e.getMessage().contains("Vista no válida")); }
+        catch (IllegalArgumentException e) { assertTrue(e.getMessage().contains("Invalid view")); }
     }
 }

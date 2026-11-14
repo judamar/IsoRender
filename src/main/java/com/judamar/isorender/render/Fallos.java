@@ -4,7 +4,7 @@ import java.io.IOException;
 import net.minecraft.client.Minecraft;
 
 /**
- * T-022 (RNF-005): cualquier fallo de seleccion, render o menu se informa en el chat con un mensaje corto en español
+ * T-022 (RNF-005): cualquier fallo de seleccion, render o menu se informa en el chat con un mensaje corto en inglés
  * (nunca un stack trace) y el detalle va a la consola. El juego no se cierra.
  */
 public final class Fallos {
@@ -15,15 +15,15 @@ public final class Fallos {
     /** Mensaje corto para el chat. Logica pura. */
     public static String mensaje(Throwable e, String contexto) {
         String m = e.getMessage();
-        if (e instanceof OutOfMemoryError) return "Memoria insuficiente para " + contexto + "; usa una región más pequeña o menos resolución.";
-        if (e instanceof IOException) return "No se pudo guardar el archivo (" + corto(m) + "). Comprueba permisos y espacio en disco.";
-        // Las excepciones de validacion propias llevan ya un mensaje en español.
+        if (e instanceof OutOfMemoryError) return "Not enough memory while " + contexto + "; use a smaller region or a lower resolution.";
+        if (e instanceof IOException) return "Could not save the file (" + corto(m) + "). Check permissions and disk space.";
+        // Las excepciones de validacion propias llevan ya un mensaje en inglés.
         if ((e instanceof IllegalArgumentException || e instanceof IllegalStateException) && m != null && !m.trim().isEmpty()) return corto(m);
-        return "Error inesperado al " + contexto + " (" + e.getClass().getSimpleName() + "). Detalles en la consola del juego.";
+        return "Unexpected error while " + contexto + " (" + e.getClass().getSimpleName() + "). Details are in the game console.";
     }
 
     private static String corto(String m) {
-        String t = m == null ? "sin detalle" : m.replaceAll("\\s+", " ").trim();
+        String t = m == null ? "no details" : m.replaceAll("\\s+", " ").trim();
         return t.length() > MAX ? t.substring(0, MAX - 1) + "…" : t;
     }
 

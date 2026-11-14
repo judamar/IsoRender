@@ -4,10 +4,10 @@ import com.judamar.isorender.render.ParametrosCamara;
 
 /** T-026 (RF-022): presets de cámara. Cambian solo rotación y elevación; zoom, desplazamiento y vista se conservan. */
 public enum PresetCamara {
-    ISOMETRICA("Isométrica", 45, 35.264),
+    ISOMETRICA("Isometric", 45, 35.264),
     /** [SUPUESTO] «frontal» = elevación mínima permitida (RN-007), no 0°. */
-    FRONTAL("Frontal", 0, ParametrosCamara.ELEV_MIN),
-    SUPERIOR("Superior", 0, 90);
+    FRONTAL("Front", 0, ParametrosCamara.ELEV_MIN),
+    SUPERIOR("Top", 0, 90);
 
     public final String etiqueta;
     public final double rotacion, elevacion;

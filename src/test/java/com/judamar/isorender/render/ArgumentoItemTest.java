@@ -26,6 +26,6 @@ public class ArgumentoItemTest {
         }
     }
     @Test public void demasiadosArgumentos() {
-        try { ArgumentoItem.parsear("stone 1 2"); fail(); } catch (IllegalArgumentException e) { assertTrue(e.getMessage().contains("Demasiados")); }
+        try { ArgumentoItem.parsear("stone 1 2"); fail(); } catch (IllegalArgumentException e) { assertTrue(e.getMessage().contains("Too many")); }
     }
 }

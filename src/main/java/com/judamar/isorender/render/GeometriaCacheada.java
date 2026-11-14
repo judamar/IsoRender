@@ -54,12 +54,12 @@ public final class GeometriaCacheada implements AutoCloseable {
     }
 
     /**
-     * Lee la region (solo lectura) y compila las listas. Lanza IllegalStateException (mensaje en espanol) si no hay
+     * Lee la region (solo lectura) y compila las listas. Lanza IllegalStateException (mensaje en ingles) si no hay
      * nada que dibujar. Fuerza AO suave y hojas con capa determinista mientras construye; los restaura siempre.
      */
     public static GeometriaCacheada construir(Minecraft mc, int[] reg) {
         World w = mc.world;
-        if (w == null || mc.player == null) throw new IllegalStateException("no hay mundo cargado");
+        if (w == null || mc.player == null) throw new IllegalStateException("No world loaded.");
         BlockPos origen = new BlockPos(reg[0], reg[1], reg[2]);
         VistaRegion vista = new VistaRegion(w, reg); // aire fuera de la region (caras de borde visibles)
         EstadoGrafico previo = EstadoGrafico.capturarAjustes(mc); // AO y hojas del jugador; se restauran siempre
@@ -194,7 +194,7 @@ public final class GeometriaCacheada implements AutoCloseable {
     }
 
     private void comprobarAbierta() {
-        if (cerrada) throw new IllegalStateException("la geometría ya fue liberada");
+        if (cerrada) throw new IllegalStateException("The geometry has already been released.");
     }
 
     /** Libera las display lists. Idempotente. */

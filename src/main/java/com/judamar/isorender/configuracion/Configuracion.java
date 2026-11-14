@@ -18,7 +18,7 @@ import java.util.Properties;
  */
 public final class Configuracion {
     public static final Configuracion POR_DEFECTO = new Configuracion("", ResolucionSalida.POR_DEFECTO,
-            ParametrosCamara.POR_DEFECTO, FondoVista.TABLERO, ValidacionRegion.MAX);
+            ParametrosCamara.POR_DEFECTO, FondoVista.CHECKERBOARD, ValidacionRegion.MAX);
 
     /** "" = carpeta por defecto (isorender dentro del directorio del juego). */
     public final String carpetaSalida;
@@ -39,15 +39,15 @@ public final class Configuracion {
         try {
             p.load(r);
         } catch (IOException | IllegalArgumentException e) { // IAE: escape \\u mal formado
-            avisos.add("Archivo de configuración ilegible o corrupto (" + e.getMessage() + "); se usan los valores por defecto.");
+            avisos.add("Configuration file unreadable or corrupt (" + e.getMessage() + "); using default values.");
             return POR_DEFECTO;
         }
         Configuracion d = POR_DEFECTO;
         ParametrosCamara dc = d.camara;
-        String carpeta = p.getProperty("carpetaSalida", d.carpetaSalida).trim();
+        String carpeta = p.getProperty("outputFolder", d.carpetaSalida).trim();
 
         int resolucion = d.resolucion;
-        String s = texto(p, "resolucion");
+        String s = texto(p, "resolution");
         if (s != null) {
             try {
                 resolucion = Integer.parseInt(s);
@@ -55,39 +55,39 @@ public final class Configuracion {
                 if (err != null) throw new IllegalArgumentException(err);
             } catch (IllegalArgumentException e) { // NumberFormatException es IAE
                 resolucion = d.resolucion;
-                avisos.add(aviso("resolucion", s, e instanceof NumberFormatException ? "no es un número entero" : e.getMessage()));
+                avisos.add(aviso("resolution", s, e instanceof NumberFormatException ? "not an integer" : e.getMessage()));
             }
         }
 
         // Cada ajuste de cámara se valida solo (con el resto por defecto) para que uno malo no tire a los demás.
-        double rot = numero(p, "rotacion", dc.rotacion, avisos), elev = numero(p, "elevacion", dc.elevacion, avisos),
-                zoom = numero(p, "zoom", dc.zoom, avisos), dx = numero(p, "desplazamientoX", dc.despX * 100, avisos) / 100,
-                dy = numero(p, "desplazamientoY", dc.despY * 100, avisos) / 100;
+        double rot = numero(p, "rotation", dc.rotacion, avisos), elev = numero(p, "elevation", dc.elevacion, avisos),
+                zoom = numero(p, "zoom", dc.zoom, avisos), dx = numero(p, "offsetX", dc.despX * 100, avisos) / 100,
+                dy = numero(p, "offsetY", dc.despY * 100, avisos) / 100;
         boolean persp = dc.perspectiva;
-        s = texto(p, "vista");
+        s = texto(p, "view");
         if (s != null) {
             if (s.equalsIgnoreCase("persp")) persp = true;
             else if (s.equalsIgnoreCase("iso")) persp = false;
-            else avisos.add(aviso("vista", s, "debe ser iso o persp"));
+            else avisos.add(aviso("view", s, "must be iso or persp"));
         }
         ParametrosCamara cam = ParametrosCamara.crear(rot, elev, zoom, dx, dy, persp);
 
         FondoVista fondo = d.fondo;
-        s = texto(p, "fondo");
+        s = texto(p, "background");
         if (s != null) {
             try { fondo = FondoVista.valueOf(s.toUpperCase(Locale.ROOT)); }
-            catch (IllegalArgumentException e) { avisos.add(aviso("fondo", s, "valores válidos: " + java.util.Arrays.toString(FondoVista.values()))); }
+            catch (IllegalArgumentException e) { avisos.add(aviso("background", s, "valid values: " + java.util.Arrays.toString(FondoVista.values()))); }
         }
 
         int max = d.tamanoMaximo;
-        s = texto(p, "tamanoMaximo");
+        s = texto(p, "maxSize");
         if (s != null) {
             try {
                 max = Integer.parseInt(s);
-                if (max < 1 || max > ValidacionRegion.MAX) throw new IllegalArgumentException("debe estar entre 1 y " + ValidacionRegion.MAX);
+                if (max < 1 || max > ValidacionRegion.MAX) throw new IllegalArgumentException("must be between 1 and " + ValidacionRegion.MAX);
             } catch (IllegalArgumentException e) {
                 max = d.tamanoMaximo;
-                avisos.add(aviso("tamanoMaximo", s, e instanceof NumberFormatException ? "no es un número entero" : e.getMessage()));
+                avisos.add(aviso("maxSize", s, e instanceof NumberFormatException ? "not an integer" : e.getMessage()));
             }
         }
         return new Configuracion(carpeta, resolucion, cam, fondo, max);
@@ -96,21 +96,21 @@ public final class Configuracion {
     /** Escribe el archivo (decimales con punto; desplazamientos en %, como en el menú). */
     public void escribir(Writer w) throws IOException {
         Properties p = new Properties();
-        p.setProperty("carpetaSalida", carpetaSalida);
-        p.setProperty("resolucion", String.valueOf(resolucion));
-        p.setProperty("rotacion", num(camara.rotacion));
-        p.setProperty("elevacion", num(camara.elevacion));
+        p.setProperty("outputFolder", carpetaSalida);
+        p.setProperty("resolution", String.valueOf(resolucion));
+        p.setProperty("rotation", num(camara.rotacion));
+        p.setProperty("elevation", num(camara.elevacion));
         p.setProperty("zoom", num(camara.zoom));
-        p.setProperty("desplazamientoX", num(Math.rint(camara.despX * 1e8) / 1e6));
-        p.setProperty("desplazamientoY", num(Math.rint(camara.despY * 1e8) / 1e6));
-        p.setProperty("vista", camara.perspectiva ? "persp" : "iso");
-        p.setProperty("fondo", fondo.name());
-        p.setProperty("tamanoMaximo", String.valueOf(tamanoMaximo));
-        p.store(w, "Configuración de IsoRender\n"
-                + "carpetaSalida: vacía = carpeta isorender del juego; ruta relativa = respecto al directorio del juego.\n"
-                + "resolucion: 512-4096. rotacion 0-359, elevacion 5-90, zoom 25-400, desplazamientoX/Y -100 a 100 (en %).\n"
-                + "vista: iso o persp. fondo: TABLERO, BLANCO, GRIS, NEGRO o VERDE. tamanoMaximo: 1-" + ValidacionRegion.MAX + " bloques por eje.\n"
-                + "Un valor inválido se ignora y se usa el de fábrica (consulta el log).");
+        p.setProperty("offsetX", num(Math.rint(camara.despX * 1e8) / 1e6));
+        p.setProperty("offsetY", num(Math.rint(camara.despY * 1e8) / 1e6));
+        p.setProperty("view", camara.perspectiva ? "persp" : "iso");
+        p.setProperty("background", fondo.name());
+        p.setProperty("maxSize", String.valueOf(tamanoMaximo));
+        p.store(w, "IsoRender configuration\n"
+                + "outputFolder: empty = the game's isorender folder; relative path = relative to the game directory.\n"
+                + "resolution: 512-4096. rotation 0-359, elevation 5-90, zoom 25-400, offsetX/Y -100 to 100 (in %).\n"
+                + "view: iso or persp. background: CHECKERBOARD, WHITE, GRAY, BLACK or GREEN. maxSize: 1-" + ValidacionRegion.MAX + " blocks per axis.\n"
+                + "An invalid value is ignored and the default is used (see the log).");
     }
 
     private static String num(double v) { return String.valueOf(v); } // punto decimal siempre
@@ -130,7 +130,7 @@ public final class Configuracion {
             if (err == null) return v;
             avisos.add(aviso(clave, s, err));
         } catch (NumberFormatException e) {
-            avisos.add(aviso(clave, s, "no es un número"));
+            avisos.add(aviso(clave, s, "not a number"));
         }
         return def;
     }
@@ -140,10 +140,10 @@ public final class Configuracion {
         ParametrosCamara d = ParametrosCamara.POR_DEFECTO;
         double r = d.rotacion, e = d.elevacion, z = d.zoom, x = 0, y = 0;
         switch (clave) {
-            case "rotacion": r = v; break;
-            case "elevacion": e = v; break;
+            case "rotation": r = v; break;
+            case "elevation": e = v; break;
             case "zoom": z = v; break;
-            case "desplazamientoX": x = v / 100; break;
+            case "offsetX": x = v / 100; break;
             default: y = v / 100;
         }
         try { ParametrosCamara.crear(r, e, z, x, y); return null; }
@@ -151,7 +151,7 @@ public final class Configuracion {
     }
 
     private static String aviso(String clave, String valor, String causa) {
-        return "Configuración: «" + clave + "=" + valor + "» no es válido (" + causa + "); se usa el valor por defecto.";
+        return "Configuration: \"" + clave + "=" + valor + "\" is not valid (" + causa + "); using the default value.";
     }
 
     @Override public boolean equals(Object o) {

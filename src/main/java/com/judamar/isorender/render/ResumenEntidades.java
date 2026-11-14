@@ -12,7 +12,7 @@ final class ResumenEntidades {
     private final String singular, plural;
 
     /** Entidades de bloque (T-021). */
-    ResumenEntidades(int dibujadas, int fallidas) { this(dibujadas, fallidas, "entidad de bloque", "entidades de bloque"); }
+    ResumenEntidades(int dibujadas, int fallidas) { this(dibujadas, fallidas, "block entity", "block entities"); }
 
     /** Textos propios, p. ej. las entidades decorativas (T-044). */
     ResumenEntidades(int dibujadas, int fallidas, String singular, String plural) {
@@ -21,19 +21,19 @@ final class ResumenEntidades {
 
     /** Marcos, pinturas y armor stands (RF-034). */
     static ResumenEntidades decorativas(int dibujadas, int fallidas) {
-        return new ResumenEntidades(dibujadas, fallidas, "entidad decorativa", "entidades decorativas");
+        return new ResumenEntidades(dibujadas, fallidas, "decorative entity", "decorative entities");
     }
 
     /** Texto para el chat con las dibujadas, o null si no había ninguna. */
     String avisoDibujadas() {
         if (dibujadas == 0) return null;
-        return dibujadas == 1 ? "1 " + singular + " dibujada" : dibujadas + " " + plural + " dibujadas";
+        return dibujadas == 1 ? "1 " + singular + " drawn" : dibujadas + " " + plural + " drawn";
     }
 
     /** Aviso del chat para las omitidas (CA-013.2), o null si no falló ninguna. */
     String avisoFallidas() {
         if (fallidas == 0) return null;
-        return fallidas == 1 ? "1 " + singular + " no se pudo dibujar y se omitió"
-                : fallidas + " " + plural + " no se pudieron dibujar y se omitieron";
+        return fallidas == 1 ? "1 " + singular + " could not be drawn and was skipped"
+                : fallidas + " " + plural + " could not be drawn and were skipped";
     }
 }

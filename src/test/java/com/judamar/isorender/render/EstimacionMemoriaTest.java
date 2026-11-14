@@ -19,7 +19,7 @@ public class EstimacionMemoriaTest {
     @Test public void geometriaRechazadaConMensajeEnEspanol() {
         String m = EstimacionMemoria.comprobarGeometria(64L * 64 * 64, 50 * MB);
         assertNotNull(m);
-        assertTrue(m.startsWith("Memoria insuficiente") && m.contains("MB"));
+        assertTrue(m.startsWith("Not enough memory") && m.contains("MB"));
     }
 
     @Test public void dibujoCrecePorResolucionYFactor() {

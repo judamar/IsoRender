@@ -46,9 +46,10 @@ public class ParametroTest {
     }
     @Test public void formato() {
         assertEquals("45", Parametro.formato(45));
-        assertEquals("35,3", Parametro.formato(35.264));
-        assertEquals("-12,5", Parametro.formato(-12.5));
+        assertEquals("35.3", Parametro.formato(35.264));
+        assertEquals("-12.5", Parametro.formato(-12.5));
         assertEquals("45°", Parametro.ROTACION.conUnidad(45));
+        assertEquals("100%", Parametro.ZOOM.conUnidad(100));
     }
     @Test public void leerNumeros() { // CA-023.1
         assertEquals(30, Parametro.ROTACION.leer("30"), 0);
@@ -58,7 +59,7 @@ public class ParametroTest {
     @Test public void leerRechazaTexto() { // CA-023.2
         for (String s : new String[] {"abc", "", "NaN", "Infinity", "1e999x"}) {
             try { Parametro.ROTACION.leer(s); fail(s); }
-            catch (IllegalArgumentException e) { assertEquals(true, e.getMessage().startsWith("Rotación no válido")); }
+            catch (IllegalArgumentException e) { assertEquals(true, e.getMessage().startsWith("Rotation is not a valid number")); }
         }
     }
 
